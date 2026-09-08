@@ -1,3 +1,2 @@
-export default function Home() {
-  return <main><h1>ProofPulse</h1><p>Verified feedback. Room to be honest.</p></main>;
-}
+import { SurveyList } from "@/ui/survey-list";
+export default function Home() { return <SurveyList />; }
