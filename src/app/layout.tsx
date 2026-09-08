@@ -3,6 +3,8 @@ import Link from "next/link";
 import "./globals.css";
 import { SurveySession } from "@/application/survey-session";
 
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "ProofPulse — thoughtful feedback, private by design",
   description: "A development prototype for verified anonymous surveys on Midnight.",
