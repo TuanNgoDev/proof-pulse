@@ -31,6 +31,7 @@ export function ParticipantFlow({ id }: { id: string }) {
     event.preventDefault();
     if (!survey) return;
     // Recheck the wall clock at action time, even if the displayed status is a second old.
+    // eslint-disable-next-line react-hooks/purity -- This form event handler runs on submit, never during render.
     const issue = validateResponse(survey, eligibility, response, Date.now());
     if (issue) { setError(issue); return; }
     setResponse("");

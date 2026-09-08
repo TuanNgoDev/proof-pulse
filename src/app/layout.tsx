@@ -11,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  // eslint-disable-next-line react-hooks/purity -- Dynamic server-only snapshot, serialized unchanged for client hydration.
+  const initialNow = Date.now();
   return <html lang="en"><body>
     <a className="skip-link" href="#main">Skip to content</a>
     <header className="site-header">
@@ -18,7 +20,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <nav aria-label="Main navigation"><Link href="/">Surveys</Link><Link href="/privacy">How privacy works</Link></nav>
       <span className="demo-label"><span />Local demo</span>
     </header>
-    <SurveySession initialNow={Date.now()}>{children}</SurveySession>
+    <SurveySession initialNow={initialNow}>{children}</SurveySession>
     <footer className="site-footer"><span>A little proof. A lot more honesty.</span><span>ProofPulse / Midnight prototype · No live network</span></footer>
   </body></html>;
 }
