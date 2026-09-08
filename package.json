@@ -12,18 +12,27 @@
     "start": "next start",
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test:db": "node --conditions=react-server --import tsx --test tests/database.integration.ts"
   },
   "dependencies": {
+    "@vercel/functions": "^3.9.5",
+    "drizzle-orm": "0.45.2",
     "next": "16.3.4",
+    "pg": "8.23.0",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "server-only": "^0.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.0.0",
+    "@types/pg": "^8.23.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "drizzle-kit": "0.31.10",
     "eslint": "^9.39.0",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "4.3.3",

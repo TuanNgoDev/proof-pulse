@@ -1,0 +1,146 @@
+{
+  "id": "b9ed928a-d1c3-485a-88ee-f1a94508f992",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.pp_surveys": {
+      "name": "pp_surveys",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eligibility": {
+          "name": "eligibility",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pp_surveys_workspace_id_pp_workspaces_id_fk": {
+          "name": "pp_surveys_workspace_id_pp_workspaces_id_fk",
+          "tableFrom": "pp_surveys",
+          "tableTo": "pp_workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pp_surveys_workspace_id_id_pk": {
+          "name": "pp_surveys_workspace_id_id_pk",
+          "columns": [
+            "workspace_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pp_surveys_date_order": {
+          "name": "pp_surveys_date_order",
+          "value": "\"pp_surveys\".\"ends_at\" > \"pp_surveys\".\"starts_at\""
+        },
+        "pp_surveys_title_length": {
+          "name": "pp_surveys_title_length",
+          "value": "length(btrim(\"pp_surveys\".\"title\")) >= 3"
+        },
+        "pp_surveys_description_length": {
+          "name": "pp_surveys_description_length",
+          "value": "length(btrim(\"pp_surveys\".\"description\")) >= 10"
+        },
+        "pp_surveys_eligibility_length": {
+          "name": "pp_surveys_eligibility_length",
+          "value": "length(btrim(\"pp_surveys\".\"eligibility\")) >= 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pp_workspaces": {
+      "name": "pp_workspaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
