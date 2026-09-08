@@ -6,12 +6,13 @@ import {
   type Survey,
   type SurveyInput,
 } from "@/domain/survey/survey";
-import { demoSurveys } from "@/infrastructure/demo-surveys";
+import { createSurveyAction, loadSurveysAction } from "./survey-actions";
+import { usePathname } from "next/navigation";
 
 const SurveyContext = createContext<{
   surveys: Survey[];
   now: number;
-  addSurvey: (input: SurveyInput) => Survey;
+  addSurvey: (input: SurveyInput) => Promise<Survey>;
 } | null>(null);
 
 export function SurveySession({
@@ -21,18 +22,77 @@ export function SurveySession({
   children: React.ReactNode;
   initialNow: number;
 }) {
-  // ponytail: tab memory only; add authenticated persistence when a real organization workflow exists.
-  const [surveys, setSurveys] = useState(demoSurveys);
+  const [surveys, setSurveys] = useState<Survey[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const pathname = usePathname();
   const [now, setNow] = useState(initialNow);
+  useEffect(() => {
+    if (loaded || pathname === "/privacy") return;
+    let active = true;
+    loadSurveysAction()
+      .then((result) => {
+        if (!active) return;
+        if (result.ok) {
+          setSurveys(result.data);
+          setLoaded(true);
+        } else setLoadError(result.error);
+      })
+      .catch(() => {
+        if (active)
+          setLoadError(
+            "Could not connect to your survey workspace. Please retry.",
+          );
+      });
+    return () => {
+      active = false;
+    };
+  }, [loaded, pathname]);
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  function addSurvey(input: SurveyInput) {
-    const survey = createSurvey(input, crypto.randomUUID());
+  async function addSurvey(input: SurveyInput) {
+    // Normalize device-local datetime values before crossing the server boundary.
+    const normalized = createSurvey(input, "validation-only");
+    const result = await createSurveyAction({
+      title: normalized.title,
+      description: normalized.description,
+      eligibility: normalized.eligibility,
+      startsAt: normalized.startsAt,
+      endsAt: normalized.endsAt,
+    });
+    if (!result.ok) throw new Error(result.error);
+    const survey = result.data;
     setSurveys((current) => [survey, ...current]);
     return survey;
   }
+  if (!loaded && pathname !== "/privacy")
+    return (
+      <main id="main" className="container">
+        <div className="empty">
+          {loadError ? (
+            <>
+              <h1>Survey storage is unavailable.</h1>
+              <p className="muted" role="alert">
+                {loadError}
+              </p>
+              <button
+                type="button"
+                className="button secondary"
+                onClick={() => window.location.reload()}
+              >
+                Retry connection
+              </button>
+            </>
+          ) : (
+            <p role="status" className="muted">
+              Opening your browser’s survey workspace…
+            </p>
+          )}
+        </div>
+      </main>
+    );
   return (
     <SurveyContext.Provider value={{ surveys, now, addSurvey }}>
       {children}

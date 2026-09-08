@@ -99,8 +99,8 @@ export function SurveyList() {
       </div>
       <p className="section-note">
         <Shield />
-        Demo surveys and new surveys live in this tab’s memory. Refreshing
-        resets the session.
+        Survey metadata is saved to this browser’s workspace. Response text is
+        never stored.
       </p>
     </main>
   );

@@ -35,7 +35,7 @@ export default function RootLayout({
           </nav>
           <span className="demo-label">
             <span />
-            Local demo
+            Browser workspace
           </span>
         </header>
         <SurveySession initialNow={initialNow}>{children}</SurveySession>

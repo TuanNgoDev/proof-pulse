@@ -10,12 +10,15 @@ export function CreateSurveyForm() {
   const router = useRouter();
   const { addSurvey } = useSurveySession();
   const [error, setError] = useState("");
-  function submit(event: FormEvent<HTMLFormElement>) {
+  const [saving, setSaving] = useState(false);
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const text = (key: string) => String(data.get(key) ?? "");
+    setError("");
+    setSaving(true);
     try {
-      const survey = addSurvey({
+      const survey = await addSurvey({
         title: text("title"),
         description: text("description"),
         eligibility: text("eligibility"),
@@ -29,6 +32,8 @@ export function CreateSurveyForm() {
           ? cause.message
           : "Survey could not be created. Please try again.",
       );
+    } finally {
+      setSaving(false);
     }
   }
   return (
@@ -112,8 +117,8 @@ export function CreateSurveyForm() {
             Enter dates in your device’s local timezone. Details are displayed
             in UTC. End must be after start.
           </p>
-          <button className="button" type="submit">
-            Create demo survey <Arrow />
+          <button className="button" type="submit" disabled={saving}>
+            {saving ? "Saving survey…" : "Create demo survey"} <Arrow />
           </button>
         </form>
         <aside>
@@ -132,8 +137,9 @@ export function CreateSurveyForm() {
               survey directory.
             </p>
             <div className="notice">
-              Local demo only. New surveys disappear on refresh and cannot be
-              shared with other people.
+              Survey metadata is saved to your browser’s server-side workspace.
+              Keep its cookie to return later. Other browsers cannot open your
+              surveys.
             </div>
           </div>
         </aside>

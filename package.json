@@ -15,7 +15,8 @@
     "test": "tsx --test tests/*.test.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test:db": "node --conditions=react-server --import tsx --test tests/database.integration.ts"
+    "test:db": "node --conditions=react-server --import tsx --test tests/database.integration.ts",
+    "test:http": "tsx --test tests/http.integration.ts"
   },
   "dependencies": {
     "@vercel/functions": "^3.9.5",

@@ -18,9 +18,18 @@ export default function PrivacyPage() {
         <h2>What this demo actually does</h2>
         <p>
           Survey titles, descriptions, eligibility rules and dates are public
-          metadata. New surveys live only in this tab’s memory and reset on a
-          full refresh. No database, account system, or organization
-          authorization is connected.
+          metadata. They are saved in PostgreSQL and scoped to an anonymous
+          browser workspace. An HttpOnly cookie acts as its access key; only a
+          hash of that key is stored in the database. Surveys survive refreshes
+          while that cookie remains. Other browsers receive separate workspaces.
+          No account system or organization authorization is connected.
+        </p>
+        <p>
+          The workspace cookie links visits and survey metadata from the same
+          browser. It is a bearer credential, not a real identity or
+          cryptographic anonymity. Clearing it loses access; saved metadata is
+          not automatically deleted. Database operators can read survey
+          metadata. Use made-up information only.
         </p>
         <p>
           Your response is kept separately, in the response form’s React state.

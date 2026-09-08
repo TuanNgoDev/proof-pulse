@@ -30,7 +30,7 @@ export function ParticipantFlow({ id }: { id: string }) {
         <div className="empty">
           <h1>Survey not found.</h1>
           <p className="muted">
-            Refreshing clears surveys created in this local demo.
+            This survey is not part of your current browser workspace.
           </p>
           <Link href="/" className="button secondary">
             All surveys

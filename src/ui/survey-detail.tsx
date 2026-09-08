@@ -14,7 +14,8 @@ export function SurveyDetail({ id }: { id: string }) {
         <div className="empty">
           <h1>Survey not found.</h1>
           <p className="muted">
-            It may have been a local demo survey cleared by a refresh.
+            This survey does not exist in your browser’s workspace. Other
+            browsers have separate workspaces.
           </p>
           <Link href="/" className="button secondary">
             Back to surveys
