@@ -1,7 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { createSurvey, type Survey, type SurveyInput } from "@/domain/survey/survey";
+import {
+  createSurvey,
+  type Survey,
+  type SurveyInput,
+} from "@/domain/survey/survey";
 import { demoSurveys } from "@/infrastructure/demo-surveys";
 
 const SurveyContext = createContext<{
@@ -10,7 +14,13 @@ const SurveyContext = createContext<{
   addSurvey: (input: SurveyInput) => Survey;
 } | null>(null);
 
-export function SurveySession({ children, initialNow }: { children: React.ReactNode; initialNow: number }) {
+export function SurveySession({
+  children,
+  initialNow,
+}: {
+  children: React.ReactNode;
+  initialNow: number;
+}) {
   // ponytail: tab memory only; add authenticated persistence when a real organization workflow exists.
   const [surveys, setSurveys] = useState(demoSurveys);
   const [now, setNow] = useState(initialNow);
@@ -23,11 +33,16 @@ export function SurveySession({ children, initialNow }: { children: React.ReactN
     setSurveys((current) => [survey, ...current]);
     return survey;
   }
-  return <SurveyContext.Provider value={{ surveys, now, addSurvey }}>{children}</SurveyContext.Provider>;
+  return (
+    <SurveyContext.Provider value={{ surveys, now, addSurvey }}>
+      {children}
+    </SurveyContext.Provider>
+  );
 }
 
 export function useSurveySession() {
   const session = useContext(SurveyContext);
-  if (!session) throw new Error("Survey session must be used inside its provider.");
+  if (!session)
+    throw new Error("Survey session must be used inside its provider.");
   return session;
 }

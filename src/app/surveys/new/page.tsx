@@ -1,2 +1,4 @@
 import { CreateSurveyForm } from "@/ui/create-survey-form";
-export default function CreateSurveyPage() { return <CreateSurveyForm />; }
+export default function CreateSurveyPage() {
+  return <CreateSurveyForm />;
+}
