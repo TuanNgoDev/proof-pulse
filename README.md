@@ -1,5 +1,11 @@
 # ProofPulse
 
+**Live web preview:** https://proof-pulse-gamma.vercel.app
+
+Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
+reloads in the same browser workspace. Hosting is live; Midnight proofs and response
+submission remain development demonstrations, not a live blockchain integration.
+
 **Current progress: ~15%** — first development pass, intentionally incomplete.
 
 ProofPulse is a verified anonymous survey and feedback prototype. It explores how
