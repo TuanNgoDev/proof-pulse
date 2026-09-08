@@ -1,0 +1,35 @@
+pragma language_version 0.18.0;
+
+import CompactStandardLibrary;
+
+// Compile-checkable concept only. No UI integration or deployed contract.
+export ledger created: Boolean;
+export ledger metadataDigest: Bytes<32>;
+export ledger startsAt: Uint<64>;
+export ledger endsAt: Uint<64>;
+
+// UNTRUSTED prototype witness: not membership verification. Must be replaced
+// with issuer-bound credential constraints before any submission can be enabled.
+witness developmentEligibility(): Boolean;
+
+export circuit createSurvey(digest: Bytes<32>, start: Uint<64>, end: Uint<64>): [] {
+  assert(!created, "Survey already initialized");
+  assert(end > start, "Invalid survey window");
+  metadataDigest = disclose(digest);
+  startsAt = disclose(start);
+  endsAt = disclose(end);
+  created = true;
+}
+
+export circuit checkEligibilityPrototype(): [] {
+  assert(created, "Survey must exist");
+  assert(developmentEligibility(), "Development eligibility rejected");
+}
+
+export circuit submitAnonymousResponsePrototype(): [] {
+  checkEligibilityPrototype();
+  // Fail closed: no response or commitment is recorded by this skeleton.
+  // Pending: trusted time, credential membership, private witness commitment,
+  // survey-scoped nullifier, atomic duplicate prevention and aggregation.
+  assert(false, "Response submission is not implemented");
+}
