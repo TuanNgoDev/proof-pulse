@@ -8,6 +8,7 @@ import {
   loadWorkspaceSurveys,
   saveWorkspaceSurvey,
 } from "../src/infrastructure/database/survey-repository";
+import * as repository from "../src/infrastructure/database/survey-repository";
 import {
   newWorkspaceToken,
   workspaceKey,
@@ -57,6 +58,26 @@ test("PostgreSQL seeds once, persists refresh reads and isolates browser workspa
     );
     assert.equal("workspaceId" in saved, false);
     assert.equal("response" in saved, false);
+    const future = { ...input, startsAt: "2098-01-01T00:00:00.000Z", endsAt: "2099-01-01T00:00:00.000Z" };
+    const scheduled = await saveWorkspaceSurvey(key, future, db);
+    const edited = await repository.changeWorkspaceSurvey(key, scheduled.id, "edit", { ...future, title: "Edited before opening" }, db);
+    assert.equal(edited.title, "Edited before opening");
+    await assert.rejects(repository.changeWorkspaceSurvey(otherKey, scheduled.id, "edit", future, db));
+    await assert.rejects(repository.changeWorkspaceSurvey(key, saved.id, "edit", future, db));
+    await assert.rejects(repository.changeWorkspaceSurvey(key, scheduled.id, "close", undefined, db));
+    await assert.rejects(repository.changeWorkspaceSurvey(key, scheduled.id, "edit", input, db));
+    const beforeClose = await repository.changeWorkspaceSurvey(key, saved.id, "check", undefined, db);
+    assert.equal(beforeClose.closedAt, null);
+    const closes = await Promise.allSettled([
+      repository.changeWorkspaceSurvey(key, saved.id, "close", undefined, db),
+      repository.changeWorkspaceSurvey(key, saved.id, "close", undefined, db),
+    ]);
+    assert.equal(closes.filter((item) => item.status === "fulfilled").length, 1);
+    const closed = (await loadWorkspaceSurveys(key, db)).find((item) => item.id === saved.id)!;
+    assert.ok(closed.closedAt);
+    assert.equal(Date.parse(closed.endsAt), Date.parse(input.endsAt));
+    await assert.rejects(repository.changeWorkspaceSurvey(key, saved.id, "check", undefined, db));
+    await assert.rejects(repository.changeWorkspaceSurvey(otherKey, saved.id, "close", undefined, db));
     await assert.rejects(
       saveWorkspaceSurvey(
         key,
@@ -72,11 +93,11 @@ test("PostgreSQL seeds once, persists refresh reads and isolates browser workspa
         endsAt: input.startsAt,
       }),
     );
-    assert.equal((await loadWorkspaceSurveys(key, db)).length, 5);
+    assert.equal((await loadWorkspaceSurveys(key, db)).length, 6);
     await db
       .insert(schema.surveys)
       .values(
-        Array.from({ length: 494 }, (_, index) => ({
+        Array.from({ length: 493 }, (_, index) => ({
           ...input,
           id: `capacity-${index}`,
           workspaceId: key,
