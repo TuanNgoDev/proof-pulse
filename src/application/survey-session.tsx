@@ -6,13 +6,14 @@ import {
   type Survey,
   type SurveyInput,
 } from "@/domain/survey/survey";
-import { createSurveyAction, loadSurveysAction } from "./survey-actions";
+import { createSurveyAction, loadSurveysAction, surveyLifecycleAction } from "./survey-actions";
 import { usePathname } from "next/navigation";
 
 const SurveyContext = createContext<{
   surveys: Survey[];
   now: number;
   addSurvey: (input: SurveyInput) => Promise<Survey>;
+  changeSurvey: (id: string, operation: "edit" | "close" | "check", input?: SurveyInput) => Promise<Survey>;
 } | null>(null);
 
 export function SurveySession({
@@ -67,6 +68,27 @@ export function SurveySession({
     setSurveys((current) => [survey, ...current]);
     return survey;
   }
+  async function changeSurvey(id: string, operation: "edit" | "close" | "check", input?: SurveyInput) {
+    let fields;
+    if (input) {
+      const normalized = createSurvey(input, id);
+      fields = {
+        title: normalized.title, description: normalized.description,
+        eligibility: normalized.eligibility, startsAt: normalized.startsAt, endsAt: normalized.endsAt,
+      };
+    }
+    const result = await surveyLifecycleAction(id, operation, fields);
+    if (!result.ok) {
+      // Refresh stale tabs after lifecycle rejection, but never mask the original failure.
+      try {
+        const latest = await loadSurveysAction();
+        if (latest.ok) setSurveys(latest.data);
+      } catch { /* The action error below keeps the flow closed on connection failure. */ }
+      throw new Error(result.error);
+    }
+    setSurveys((current) => current.map((survey) => survey.id === id ? result.data : survey));
+    return result.data;
+  }
   if (!loaded && pathname !== "/privacy")
     return (
       <main id="main" className="container">
@@ -94,7 +116,7 @@ export function SurveySession({
       </main>
     );
   return (
-    <SurveyContext.Provider value={{ surveys, now, addSurvey }}>
+    <SurveyContext.Provider value={{ surveys, now, addSurvey, changeSurvey }}>
       {children}
     </SurveyContext.Provider>
   );

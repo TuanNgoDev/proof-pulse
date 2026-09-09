@@ -1,12 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { useSurveySession } from "@/application/survey-session";
 import { surveyStatus } from "@/domain/survey/survey";
 import { Arrow, Shield } from "./icons";
 
 export function SurveyDetail({ id }: { id: string }) {
-  const { surveys, now } = useSurveySession();
+  const { surveys, now, changeSurvey } = useSurveySession();
+  const [closing, setClosing] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [error, setError] = useState("");
+  async function close() {
+    setClosing(true);
+    setError("");
+    try { await changeSurvey(id, "close"); setConfirmClose(false); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "Survey could not be closed."); }
+    finally { setClosing(false); }
+  }
   const survey = surveys.find((item) => item.id === id);
   if (!survey)
     return (
@@ -46,15 +57,23 @@ export function SurveyDetail({ id }: { id: string }) {
             <span className={`status ${status.toLowerCase()}`}>{status}</span>
           </div>
           <p className="detail-description">{survey.description}</p>
+          {error && <p role="alert" className="error">{error}</p>}
+          {status === "Scheduled" && <Link className="button secondary" href={`/surveys/${id}/edit`}>Edit survey</Link>}
+          {status === "Open" && (confirmClose ? <div className="notice">
+            <p>Close this survey now? This cannot be undone. Its scheduled end stays in the record.</p>
+            <button type="button" className="button secondary" disabled={closing} onClick={close}>{closing ? "Closing…" : "Confirm close"}</button>{" "}
+            <button type="button" className="button secondary" disabled={closing} onClick={() => setConfirmClose(false)}>Cancel</button>
+          </div> : <button type="button" className="button secondary" onClick={() => setConfirmClose(true)}>Close survey early</button>)}
           <dl className="metadata">
             <div>
               <dt>Starts · UTC</dt>
               <dd>{format(survey.startsAt)}</dd>
             </div>
             <div>
-              <dt>Ends · UTC</dt>
+              <dt>Scheduled end · UTC</dt>
               <dd>{format(survey.endsAt)}</dd>
             </div>
+            {survey.closedAt && <div><dt>Closed early · UTC</dt><dd>{format(survey.closedAt)}</dd></div>}
           </dl>
           <section className="stack">
             <h2>Who we’re listening to</h2>

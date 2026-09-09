@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import {
   loadWorkspaceSurveys,
   saveWorkspaceSurvey,
+  changeWorkspaceSurvey,
 } from "@/infrastructure/database/survey-repository";
 import {
   newWorkspaceToken,
@@ -14,6 +15,26 @@ import type { Survey } from "@/domain/survey/survey";
 
 const cookieName = "proofpulse_workspace";
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export async function surveyLifecycleAction(
+  id: string,
+  operation: "edit" | "close" | "check",
+  input?: unknown,
+): Promise<Result<Survey>> {
+  try {
+    const token = (await cookies()).get(cookieName)?.value;
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token))
+      return { ok: false, error: "Open your survey workspace first." };
+    let validated;
+    if (operation === "edit") {
+      try { validated = parseSurveyInput(input); }
+      catch { return { ok: false, error: "Invalid public survey fields or dates." }; }
+    } else validated = input;
+    return { ok: true, data: await changeWorkspaceSurvey(workspaceKey(token), id, operation, validated) };
+  } catch (error) {
+    return { ok: false, error: error instanceof RangeError ? error.message : "Survey storage is unavailable. Retry before continuing." };
+  }
+}
 
 export async function loadSurveysAction(): Promise<Result<Survey[]>> {
   try {

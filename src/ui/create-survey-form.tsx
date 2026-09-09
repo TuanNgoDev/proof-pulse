@@ -5,10 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useSurveySession } from "@/application/survey-session";
 import { Arrow } from "./icons";
+import { surveyStatus } from "@/domain/survey/survey";
 
-export function CreateSurveyForm() {
+export function CreateSurveyForm({ id }: { id?: string }) {
   const router = useRouter();
-  const { addSurvey } = useSurveySession();
+  const { addSurvey, changeSurvey, surveys, now } = useSurveySession();
+  const existing = surveys.find((survey) => survey.id === id);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -18,13 +20,14 @@ export function CreateSurveyForm() {
     setError("");
     setSaving(true);
     try {
-      const survey = await addSurvey({
+      const input = {
         title: text("title"),
         description: text("description"),
         eligibility: text("eligibility"),
         startsAt: text("startsAt"),
         endsAt: text("endsAt"),
-      });
+      };
+      const survey = id ? await changeSurvey(id, "edit", input) : await addSurvey(input);
       router.push(`/surveys/${survey.id}`);
     } catch (cause) {
       setError(
@@ -36,15 +39,22 @@ export function CreateSurveyForm() {
       setSaving(false);
     }
   }
+  if (id && (!existing || surveyStatus(existing, now) !== "Scheduled"))
+    return <main id="main" className="container"><div className="empty"><h1>Editing is unavailable.</h1><p className="muted">Only not-yet-open surveys in this workspace can be edited.</p><Link href={`/surveys/${id}`} className="button secondary">Back to survey</Link></div></main>;
+  const localDate = (value?: string) => {
+    if (!value) return "";
+    const date = new Date(value);
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  };
   return (
     <main id="main" className="container">
-      <Link href="/" className="back-link">
+      <Link href={id ? `/surveys/${id}` : "/"} className="back-link">
         <Arrow back />
-        All surveys
+        {id ? "Cancel editing" : "All surveys"}
       </Link>
       <div className="page-heading">
         <div>
-          <h1>Start a conversation.</h1>
+          <h1>{id ? "Edit your survey." : "Start a conversation."}</h1>
           <p>Give your community a safe space to share what matters.</p>
         </div>
       </div>
@@ -60,6 +70,7 @@ export function CreateSurveyForm() {
             <input
               id="title"
               name="title"
+              defaultValue={existing?.title}
               required
               minLength={3}
               maxLength={100}
@@ -71,6 +82,7 @@ export function CreateSurveyForm() {
             <textarea
               id="description"
               name="description"
+              defaultValue={existing?.description}
               required
               minLength={10}
               maxLength={2000}
@@ -87,6 +99,7 @@ export function CreateSurveyForm() {
             <textarea
               id="eligibility"
               name="eligibility"
+              defaultValue={existing?.eligibility}
               required
               minLength={5}
               maxLength={500}
@@ -104,13 +117,14 @@ export function CreateSurveyForm() {
               <input
                 id="startsAt"
                 name="startsAt"
+                defaultValue={localDate(existing?.startsAt)}
                 type="datetime-local"
                 required
               />
             </div>
             <div className="field">
               <label htmlFor="endsAt">Ends at</label>
-              <input id="endsAt" name="endsAt" type="datetime-local" required />
+              <input id="endsAt" name="endsAt" type="datetime-local" defaultValue={localDate(existing?.endsAt)} required />
             </div>
           </div>
           <p className="hint" style={{ marginBottom: 24 }}>
@@ -118,7 +132,7 @@ export function CreateSurveyForm() {
             in UTC. End must be after start.
           </p>
           <button className="button" type="submit" disabled={saving}>
-            {saving ? "Saving survey…" : "Create demo survey"} <Arrow />
+            {saving ? "Saving survey…" : id ? "Save changes" : "Create demo survey"} <Arrow />
           </button>
         </form>
         <aside>
