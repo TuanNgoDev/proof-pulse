@@ -14,7 +14,8 @@ test("production HTTP actions persist metadata, isolate cookies and reject cross
     process.env.TEST_DATABASE_URL,
     "Provide the direct URL of the database used by the local production server.",
   );
-  const origin = "http://localhost:3112";
+  const origin = process.env.TEST_BASE_URL ?? "http://localhost:3112";
+  assert.ok(/^http:\/\/localhost:\d+$/.test(origin), "HTTP checks are localhost-only.");
   const manifest = JSON.parse(
     readFileSync(".next/server/server-reference-manifest.json", "utf8"),
   ) as { node: Record<string, { exportedName: string }> };
@@ -101,6 +102,28 @@ test("production HTTP actions persist metadata, isolate cookies and reject cross
       isolated.data.some((survey) => survey.id === id),
       false,
     );
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "check"], cookie))).ok, true);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "close"], otherCookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "close"]))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "edit", input], cookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "close"], cookie))).ok, true);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "check"], cookie))).ok, false, "A stale participant must not pass the current persisted lifecycle.");
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "close"], cookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [id, "check", { response: "private" }], cookie))).ok, false);
+    const future = { ...input, startsAt: "2098-01-01T00:00:00.000Z", endsAt: "2099-01-01T00:00:00.000Z" };
+    const scheduled = await result(await call("createSurveyAction", [future], cookie));
+    assert.equal(scheduled.ok, true);
+    assert.ok(!Array.isArray(scheduled.data));
+    const scheduledId = scheduled.data.id;
+    const edited = await result(await call("surveyLifecycleAction", [scheduledId, "edit", { ...future, title: "HTTP edited survey" }], cookie));
+    assert.equal(edited.ok, true);
+    assert.ok(!Array.isArray(edited.data));
+    assert.equal(edited.data.title, "HTTP edited survey");
+    assert.equal((await result(await call("surveyLifecycleAction", [scheduledId, "edit", future], otherCookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [scheduledId, "close"], cookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [scheduledId, "edit", input], cookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [scheduledId, "edit", { ...future, closedAt: null }], cookie))).ok, false);
+    assert.equal((await result(await call("surveyLifecycleAction", [scheduledId, "delete"], cookie))).ok, false);
     assert.equal(
       (await result(await call("createSurveyAction", [input]))).ok,
       false,
@@ -141,7 +164,8 @@ test("production HTTP actions persist metadata, isolate cookies and reject cross
     await oversized.text();
     const after = await result(await call("loadSurveysAction", [], cookie));
     assert.ok(Array.isArray(after.data));
-    assert.equal(after.data.length, 5);
+    assert.equal(after.data.length, 6);
+    assert.equal(after.data.find((survey) => survey.id === scheduledId)?.title, "HTTP edited survey");
   } finally {
     try {
       if (keys.length)
