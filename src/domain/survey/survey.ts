@@ -8,14 +8,15 @@ export type Survey = {
   eligibility: string;
   startsAt: string;
   endsAt: string;
+  closedAt?: string | null;
 };
-export type SurveyInput = Omit<Survey, "id">;
+export type SurveyInput = Omit<Survey, "id" | "closedAt">;
 
 export function surveyStatus(
-  survey: Pick<Survey, "startsAt" | "endsAt">,
+  survey: Pick<Survey, "startsAt" | "endsAt" | "closedAt">,
   now: number,
 ): SurveyStatus {
-  if (now >= Date.parse(survey.endsAt)) return "Closed";
+  if (survey.closedAt || now >= Date.parse(survey.endsAt)) return "Closed";
   return now < Date.parse(survey.startsAt) ? "Scheduled" : "Open";
 }
 

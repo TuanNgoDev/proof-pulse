@@ -1,0 +1,1 @@
+ALTER TABLE "pp_surveys" ADD COLUMN "closed_at" timestamp with time zone;

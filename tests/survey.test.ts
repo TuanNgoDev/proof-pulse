@@ -47,6 +47,12 @@ test("survey opens inclusively and closes exactly at its end", () => {
   assert.equal(surveyStatus(input, end), "Closed");
 });
 
+test("early closure overrides the scheduled window without changing its end", () => {
+  const survey = { ...input, closedAt: "2026-09-01T10:00:00.000Z" };
+  assert.equal(surveyStatus(survey, Date.parse("2026-09-01T11:00:00Z")), "Closed");
+  assert.equal(survey.endsAt, "2026-09-02T09:00:00Z");
+});
+
 test("public survey creation never copies private input fields", () => {
   const withPrivate = {
     ...input,

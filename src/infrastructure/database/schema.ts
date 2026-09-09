@@ -37,6 +37,7 @@ export const surveys = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    closedAt: timestamp("closed_at", { withTimezone: true, mode: "string" }),
   },
   (table) => [
     primaryKey({ columns: [table.workspaceId, table.id] }),
