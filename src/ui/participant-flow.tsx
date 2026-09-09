@@ -13,13 +13,14 @@ import { verifyDevelopmentEligibility } from "@/infrastructure/development-eligi
 import { Arrow, Shield } from "./icons";
 
 export function ParticipantFlow({ id }: { id: string }) {
-  const { surveys, now } = useSurveySession();
+  const { surveys, now, changeSurvey } = useSurveySession();
   const survey = surveys.find((item) => item.id === id);
   const [outcome, setOutcome] = useState<"eligible" | "ineligible">("eligible");
   const [eligibility, setEligibility] = useState<EligibilityResult | null>(
     null,
   );
   const [verifying, setVerifying] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   // Private response is component-local; never passed to the public survey session.
   const [response, setResponse] = useState("");
   const [completed, setCompleted] = useState(false);
@@ -42,15 +43,17 @@ export function ParticipantFlow({ id }: { id: string }) {
   async function verify() {
     setVerifying(true);
     setError("");
+    setEligibility(null);
     try {
+      await changeSurvey(id, "check");
       setEligibility(await verifyDevelopmentEligibility(id, outcome));
-    } catch {
-      setError("Demo verification failed. Please try again.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Demo verification failed. Please try again.");
     } finally {
       setVerifying(false);
     }
   }
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!survey) return;
     // Recheck the wall clock at action time, even if the displayed status is a second old.
@@ -60,9 +63,17 @@ export function ParticipantFlow({ id }: { id: string }) {
       setError(issue);
       return;
     }
-    setResponse("");
-    setCompleted(true);
+    setSubmitting(true);
     setError("");
+    try {
+      // Only the survey id crosses the server boundary; response text stays in this component.
+      await changeSurvey(id, "check");
+      setResponse("");
+      setCompleted(true);
+    } catch (cause) {
+      setEligibility(null);
+      setError(cause instanceof Error ? cause.message : "Could not confirm the survey is still open.");
+    } finally { setSubmitting(false); }
   }
   return (
     <main id="main" className="container">
@@ -87,8 +98,8 @@ export function ParticipantFlow({ id }: { id: string }) {
             <section className="success" role="status">
               <h2>Thanks for trying the flow.</h2>
               <p style={{ marginTop: 12 }}>
-                Your response text was cleared from the form. Nothing was saved,
-                sent, or published. This was a local submission simulation—not a
+                Your response text was cleared from the form. No response was saved,
+                sent, or published. Only the survey’s open status was checked on the server. This was a local submission simulation—not a
                 collected survey response.
               </p>
               <p className="small" style={{ marginTop: 12 }}>
@@ -119,7 +130,7 @@ export function ParticipantFlow({ id }: { id: string }) {
                   <select
                     id="outcome"
                     value={outcome}
-                    disabled={verifying}
+                    disabled={verifying || submitting}
                     onChange={(event) => {
                       setOutcome(
                         event.target.value as "eligible" | "ineligible",
@@ -140,7 +151,7 @@ export function ParticipantFlow({ id }: { id: string }) {
                 <button
                   type="button"
                   className="button teal"
-                  disabled={verifying}
+                  disabled={verifying || submitting}
                   onClick={verify}
                 >
                   {verifying ? "Verifying demo…" : "Verify Eligibility"}
@@ -173,7 +184,7 @@ export function ParticipantFlow({ id }: { id: string }) {
                       id="response"
                       value={response}
                       onChange={(event) => setResponse(event.target.value)}
-                      disabled={!canRespond(survey, eligibility, now)}
+                      disabled={submitting || verifying || !canRespond(survey, eligibility, now)}
                       required
                       minLength={2}
                       maxLength={2000}
@@ -184,16 +195,16 @@ export function ParticipantFlow({ id }: { id: string }) {
                     />
                     <p id="response-note" className="hint">
                       {canRespond(survey, eligibility, now)
-                        ? "Local component memory only. Submitting clears this text without sending it anywhere."
+                        ? "Local component memory only. Submitting checks the survey status on the server, then clears this text without sending it."
                         : "Verify demo eligibility above to unlock the response form."}
                     </p>
                   </div>
                   <button
                     type="submit"
-                    disabled={!canRespond(survey, eligibility, now)}
+                    disabled={submitting || verifying || !canRespond(survey, eligibility, now)}
                     className="button"
                   >
-                    Simulate private submission <Arrow />
+                    {submitting ? "Checking survey…" : "Simulate private submission"} <Arrow />
                   </button>
                 </form>
               </section>
