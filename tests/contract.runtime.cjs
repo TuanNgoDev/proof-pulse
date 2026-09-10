@@ -54,3 +54,16 @@ test("anonymous response remains fail closed even with eligible witness", () => 
   const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
   assert.throws(() => contract.circuits.submitAnonymousResponsePrototype(context), /not implemented/);
 });
+
+test("only organizer can close an open survey and closure cannot reopen it", () => {
+  const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
+  context.currentPrivateState.secret = new Uint8Array(32).fill(8);
+  assert.throws(() => contract.circuits.closeSurvey(context), /Unauthorized organizer/);
+  context.currentPrivateState.secret = organizerSecret;
+  const closed = contract.circuits.closeSurvey(context).context;
+  assert.equal(ledger(closed.transactionContext.state).closed, true);
+  assert.equal(ledger(closed.transactionContext.state).endsAt, 200n);
+  assert.throws(() => contract.circuits.checkEligibilityPrototype(closed), /Survey is not open/);
+  assert.throws(() => contract.circuits.closeSurvey(closed), /Survey is not open/);
+  assert.throws(() => contract.circuits.createSurvey(closed, digest, 300n, 400n), /already initialized/);
+});
