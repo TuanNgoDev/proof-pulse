@@ -11,4 +11,4 @@ const compilerRoot = windows
 const version = execFileSync(command, [...prefix, "--version"], { encoding: "utf8" }).trim();
 if (version !== "0.26.0") throw new Error(`Expected Compact 0.26.0, received ${version}`);
 execFileSync(command, [...prefix, "--skip-zk", `${compilerRoot}/contracts/survey.compact`, `${compilerRoot}/.compact-build`], { stdio: "inherit" });
-execFileSync(process.execPath, ["--test", "tests/contract.runtime.cjs"], { cwd: root, stdio: "inherit" });
+execFileSync(process.execPath, ["--test", "tests/contract.runtime.mjs"], { cwd: root, stdio: "inherit" });

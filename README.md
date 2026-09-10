@@ -6,7 +6,7 @@ Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
 reloads in the same browser workspace. Hosting is live; Midnight proofs and response
 submission remain development demonstrations, not a live blockchain integration.
 
-**Current progress: ~20%** — a rough product-scope estimate, not measured completion.
+**Current progress: ~29%** — a rough product-scope estimate, not measured completion.
 Persisted survey lifecycle management now works locally; most proof, collection,
 authentication and aggregation work remains. The hosted preview above has not been
 updated by this iteration.
@@ -24,7 +24,8 @@ collecting identities alongside individual responses.
 - Response form gated by survey window and survey-bound demo eligibility.
 - Private form state isolated from public metadata; simulated submit clears text.
 - Domain interfaces for future participant proofs, nullifiers and atomic claims.
-- Small Compact skeleton with compiler-checked metadata/schedule foundation.
+- Compact prototype with constructor-bound organizer authorization, kernel-time window,
+  irreversible early closure and executable compiled-runtime tests; submission remains disabled.
 - Loading, empty, missing-survey, form validation and route error states.
 - Real domain tests using Node's test runner, TypeScript and ESLint checks.
 - PostgreSQL/Drizzle persistence for survey metadata in an anonymous browser workspace.
@@ -201,7 +202,10 @@ protocol timestamp.
 
 `contracts/survey.compact` was checked with Compact compiler 0.26.0, language 0.18.0,
 using `--skip-zk`. It models single-survey creation, date ordering and an explicitly
-untrusted eligibility witness. **Anonymous submission always rejects.**
+untrusted eligibility witness. Constructor-bound private-secret authorization protects
+creation/early closure; kernel time gates participation. `pnpm test:contract` compiles
+and executes real generated circuits using pinned runtime 0.9.0, including adversarial
+local transcript replay. **Anonymous submission always rejects.**
 
 Compilation is real; production membership proof verification, proof generation,
 wallet connection, deployment, and network interaction are **not implemented**.
@@ -212,7 +216,8 @@ and [Compact language reference](https://docs.midnight.network/compact/reference
 
 ## Next milestones (not implemented)
 
-1. Add real organizer authentication, recovery, retention cleanup and abuse/rate limits.
+1. Integrate organizer authorization with the UI; add account identity, key custody/recovery,
+   retention cleanup and abuse/rate limits.
 2. Replace the development scenario with reviewed eligible-group proof constraints.
 3. Bind private response commitments to survey-scoped nullifiers atomically.
 4. Integrate wallet, proof provider and deployment with adversarial contract tests.

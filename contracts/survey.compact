@@ -60,7 +60,7 @@ export circuit checkEligibilityPrototype(): [] {
 export circuit submitAnonymousResponsePrototype(): [] {
   checkEligibilityPrototype();
   // Fail closed: no response or commitment is recorded by this skeleton.
-  // Pending: trusted time, credential membership, private witness commitment,
+  // Pending: credential membership, private response commitment,
   // survey-scoped nullifier, atomic duplicate prevention and aggregation.
   assert(false, "Response submission is not implemented");
 }
