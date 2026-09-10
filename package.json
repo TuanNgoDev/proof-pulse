@@ -13,6 +13,7 @@
     "lint": "eslint . --max-warnings=0",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
+    "test:contract": "node scripts/test-contract.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "test:db": "node --conditions=react-server --import tsx --test tests/database.integration.ts",
@@ -28,6 +29,7 @@
     "server-only": "^0.0.1"
   },
   "devDependencies": {
+    "@midnight-ntwrk/compact-runtime": "0.9.0",
     "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.23.1",

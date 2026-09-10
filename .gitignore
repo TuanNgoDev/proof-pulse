@@ -1,4 +1,5 @@
 node_modules/
+.compact-build/
 .next/
 out/
 .env*
