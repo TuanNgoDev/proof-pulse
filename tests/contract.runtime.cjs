@@ -4,12 +4,14 @@ const runtime = require("@midnight-ntwrk/compact-runtime");
 const { Contract, ledger } = require("../.compact-build/contract/index.cjs");
 
 const digest = new Uint8Array(32).fill(3);
+const organizerSecret = new Uint8Array(32).fill(7);
 const contract = new Contract({
   developmentEligibility: ({ privateState }) => [privateState, privateState.eligible],
+  organizerSecret: ({ privateState }) => [privateState, privateState.secret],
 });
 
 function fresh() {
-  const initial = contract.initialState(runtime.constructorContext({ eligible: true }, "00".repeat(32)));
+  const initial = contract.initialState(runtime.constructorContext({ eligible: true, secret: organizerSecret }, "00".repeat(32)));
   return {
     originalState: initial.currentContractState,
     currentPrivateState: initial.currentPrivateState,
@@ -17,6 +19,13 @@ function fresh() {
     transactionContext: new runtime.QueryContext(initial.currentContractState.data, runtime.dummyContractAddress()),
   };
 }
+
+test("a caller without constructor organizer secret cannot front-run initialization", () => {
+  const context = fresh();
+  context.currentPrivateState = { eligible: true, secret: new Uint8Array(32).fill(8) };
+  assert.throws(() => contract.circuits.createSurvey(context, digest, 100n, 200n), /Unauthorized organizer/);
+  assert.equal(ledger(context.transactionContext.state).created, false);
+});
 
 test("initialization persists metadata once and rejects invalid schedules", () => {
   assert.throws(() => contract.circuits.createSurvey(fresh(), digest, 200n, 100n), /Invalid survey window/);
