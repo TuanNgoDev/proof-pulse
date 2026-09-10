@@ -38,8 +38,14 @@ export circuit createSurvey(digest: Bytes<32>, start: Uint<64>, end: Uint<64>): 
   created = true;
 }
 
-export circuit checkEligibilityPrototype(): [] {
+circuit assertOpen(): [] {
   assert(created, "Survey must exist");
+  assert(!kernel.blockTimeLessThan(startsAt), "Survey is not open");
+  assert(kernel.blockTimeLessThan(endsAt), "Survey is not open");
+}
+
+export circuit checkEligibilityPrototype(): [] {
+  assertOpen();
   assert(developmentEligibility(), "Development eligibility rejected");
 }
 
