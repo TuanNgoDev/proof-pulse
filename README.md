@@ -6,7 +6,7 @@ Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
 reloads in the same browser workspace. Hosting is live; Midnight proofs and response
 submission remain development demonstrations, not a live blockchain integration.
 
-**Current progress: ~29%** — a rough product-scope estimate, not measured completion.
+**Current progress: ~39%** — a rough product-scope estimate, not measured completion.
 Persisted survey lifecycle management now works locally; most proof, collection,
 authentication and aggregation work remains. The hosted preview above has not been
 updated by this iteration.
@@ -25,7 +25,8 @@ collecting identities alongside individual responses.
 - Private form state isolated from public metadata; simulated submit clears text.
 - Domain interfaces for future participant proofs, nullifiers and atomic claims.
 - Compact prototype with constructor-bound organizer authorization, kernel-time window,
-  irreversible early closure and executable compiled-runtime tests; submission remains disabled.
+  irreversible early closure, salted response commitments and per-secret duplicate guards.
+  These are compiled-runtime features only, not connected to the UI or a blockchain.
 - Loading, empty, missing-survey, form validation and route error states.
 - Real domain tests using Node's test runner, TypeScript and ESLint checks.
 - PostgreSQL/Drizzle persistence for survey metadata in an anonymous browser workspace.
@@ -132,7 +133,7 @@ missing; it never silently saves to browser memory. `/privacy` remains readable.
 `src/infrastructure/database/schema.ts` is the source of truth. Apply the committed
 tracked migrations via `pnpm db:migrate` using the direct connection. Migration
 `drizzle/0001_unique_dazzler.sql` adds nullable `closed_at`; it preserves existing
-survey dates and rows. This iteration validated it on an isolated development
+survey dates and rows. An earlier iteration validated it on an isolated development
 database branch; production migration/deployment remains a separate operator step.
 For future schema changes, edit the Drizzle schema, run `pnpm db:generate`, review the
 generated SQL and apply it to a disposable branch before production. Do not use
@@ -205,7 +206,13 @@ using `--skip-zk`. It models single-survey creation, date ordering and an explic
 untrusted eligibility witness. Constructor-bound private-secret authorization protects
 creation/early closure; kernel time gates participation. `pnpm test:contract` compiles
 and executes real generated circuits using pinned runtime 0.9.0, including adversarial
-local transcript replay. **Anonymous submission always rejects.**
+local transcript replay. The contract-only submission prototype records a salted
+response commitment and a metadata/deployment-bound nullifier, rejecting a second
+submission under the same participant secret even with a different answer or salt.
+**This is not one-person-one-response:** changing the secret bypasses that per-secret
+limit, and eligibility remains an untrusted Boolean witness. No issuer membership
+proof exists. Public nullifiers and counts expose participation information; this
+is not a production anonymity guarantee. The UI still only simulates submission.
 
 Compilation is real; production membership proof verification, proof generation,
 wallet connection, deployment, and network interaction are **not implemented**.
@@ -219,7 +226,8 @@ and [Compact language reference](https://docs.midnight.network/compact/reference
 1. Integrate organizer authorization with the UI; add account identity, key custody/recovery,
    retention cleanup and abuse/rate limits.
 2. Replace the development scenario with reviewed eligible-group proof constraints.
-3. Bind private response commitments to survey-scoped nullifiers atomically.
+3. Bind participant secrets to verified credentials; validate commitment/nullifier
+   atomicity and concurrency on the network.
 4. Integrate wallet, proof provider and deployment with adversarial contract tests.
 5. Add secure collection and aggregate publication with an explicit disclosure policy.
 

@@ -64,6 +64,7 @@ export circuit checkEligibilityPrototype(): [] {
 
 export circuit submitAnonymousResponsePrototype(): [] {
   checkEligibilityPrototype();
+  // Prototype only: fresh secrets bypass this limit until bound to real credentials.
   const nullifier = disclose(persistentHash<Vector<4, Bytes<32>>>(
     [pad(32, "proofpulse:nullifier:v1"), kernel.self().bytes, metadataDigest, participantSecret()]));
   assert(!responses.member(nullifier), "Already participated");
