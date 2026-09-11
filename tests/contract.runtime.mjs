@@ -5,13 +5,21 @@ import { Contract, ledger } from "../.compact-build/contract/index.cjs";
 
 const digest = new Uint8Array(32).fill(3);
 const organizerSecret = new Uint8Array(32).fill(7);
+const participantSecret = new Uint8Array(32).fill(11);
+const responseDigest = new Uint8Array(32).fill(13);
+const responseSalt = new Uint8Array(32).fill(17);
 const contract = new Contract({
   developmentEligibility: ({ privateState }) => [privateState, privateState.eligible],
   organizerSecret: ({ privateState }) => [privateState, privateState.secret],
+  participantSecret: ({ privateState }) => [privateState, privateState.participantSecret],
+  responseDigest: ({ privateState }) => [privateState, privateState.responseDigest],
+  responseSalt: ({ privateState }) => [privateState, privateState.responseSalt],
 });
 
 function fresh(time = 150n, error = 0) {
-  const initial = contract.initialState(runtime.constructorContext({ eligible: true, secret: organizerSecret }, "00".repeat(32)));
+  const initial = contract.initialState(runtime.constructorContext({
+    eligible: true, secret: organizerSecret, participantSecret, responseDigest, responseSalt,
+  }, "00".repeat(32)));
   const context = {
     originalState: initial.currentContractState,
     currentPrivateState: initial.currentPrivateState,
@@ -50,9 +58,46 @@ test("initialization persists metadata once and rejects invalid schedules", () =
   assert.throws(() => contract.circuits.createSurvey(context, digest, 100n, 200n), /already initialized/);
 });
 
-test("anonymous response remains fail closed even with eligible witness", () => {
+test("an open survey records one salted response commitment per participant secret", () => {
   const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
-  assert.throws(() => contract.circuits.submitAnonymousResponsePrototype(context), /not implemented/);
+  const submitted = contract.circuits.submitAnonymousResponsePrototype(context).context;
+  const state = ledger(submitted.transactionContext.state);
+  assert.equal(state.responseCount, 1n);
+  assert.equal(state.responses.size(), 1n);
+  const [[nullifier, commitment]] = [...state.responses];
+  for (const value of [nullifier, commitment]) {
+    assert.equal(value.length, 32);
+    for (const privateValue of [participantSecret, responseDigest, responseSalt]) {
+      assert.notDeepEqual(value, privateValue);
+    }
+  }
+  submitted.currentPrivateState.responseDigest = new Uint8Array(32).fill(19);
+  submitted.currentPrivateState.responseSalt = new Uint8Array(32).fill(23);
+  assert.throws(() => contract.circuits.submitAnonymousResponsePrototype(submitted), /Already participated/);
+  assert.equal(ledger(submitted.transactionContext.state).responseCount, 1n);
+  assert.deepEqual([...ledger(submitted.transactionContext.state).responses], [[nullifier, commitment]]);
+  submitted.currentPrivateState.participantSecret = new Uint8Array(32).fill(29);
+  const second = contract.circuits.submitAnonymousResponsePrototype(submitted).context;
+  assert.equal(ledger(second.transactionContext.state).responseCount, 2n);
+  assert.equal(ledger(second.transactionContext.state).responses.size(), 2n);
+});
+
+test("response salt and digest each affect the commitment but not the nullifier", () => {
+  const submit = (overrides) => {
+    const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
+    Object.assign(context.currentPrivateState, overrides);
+    const submitted = contract.circuits.submitAnonymousResponsePrototype(context).context;
+    return [...ledger(submitted.transactionContext.state).responses][0];
+  };
+  const [nullifier, commitment] = submit({});
+  for (const overrides of [
+    { responseSalt: new Uint8Array(32).fill(31) },
+    { responseDigest: new Uint8Array(32).fill(37) },
+  ]) {
+    const [nextNullifier, nextCommitment] = submit(overrides);
+    assert.deepEqual(nextNullifier, nullifier);
+    assert.notDeepEqual(nextCommitment, commitment);
+  }
 });
 
 test("participant entry points reject missing survey and false eligibility", () => {

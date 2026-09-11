@@ -9,6 +9,8 @@ export ledger metadataDigest: Bytes<32>;
 export ledger startsAt: Uint<64>;
 export ledger endsAt: Uint<64>;
 export sealed ledger organizerCommitment: Bytes<32>;
+export ledger responses: Map<Bytes<32>, Bytes<32>>;
+export ledger responseCount: Counter;
 
 witness organizerSecret(): Bytes<32>;
 
@@ -26,8 +28,11 @@ circuit assertOrganizer(): [] {
 }
 
 // UNTRUSTED prototype witness: not membership verification. Must be replaced
-// with issuer-bound credential constraints before any submission can be enabled.
+// with issuer-bound credential constraints before production participation.
 witness developmentEligibility(): Boolean;
+witness participantSecret(): Bytes<32>;
+witness responseDigest(): Bytes<32>;
+witness responseSalt(): Bytes<32>;
 
 export circuit createSurvey(digest: Bytes<32>, start: Uint<64>, end: Uint<64>): [] {
   assertOrganizer();
@@ -59,8 +64,12 @@ export circuit checkEligibilityPrototype(): [] {
 
 export circuit submitAnonymousResponsePrototype(): [] {
   checkEligibilityPrototype();
-  // Fail closed: no response or commitment is recorded by this skeleton.
-  // Pending: credential membership, private response commitment,
-  // survey-scoped nullifier, atomic duplicate prevention and aggregation.
-  assert(false, "Response submission is not implemented");
+  const nullifier = disclose(persistentHash<Vector<3, Bytes<32>>>(
+    [pad(32, "proofpulse:nullifier:v1"), metadataDigest, participantSecret()]));
+  assert(!responses.member(nullifier), "Already participated");
+  const commitment = disclose(persistentCommit<Vector<4, Bytes<32>>>(
+    [pad(32, "proofpulse:response:v1"), metadataDigest, nullifier, responseDigest()],
+    responseSalt()));
+  responses.insert(nullifier, commitment);
+  responseCount.increment(1);
 }
