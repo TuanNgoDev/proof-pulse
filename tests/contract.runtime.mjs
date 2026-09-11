@@ -136,8 +136,54 @@ test("only organizer can close an open survey and closure cannot reopen it", () 
   assert.equal(ledger(closed.transactionContext.state).closed, true);
   assert.equal(ledger(closed.transactionContext.state).endsAt, 200n);
   assert.throws(() => contract.circuits.checkEligibilityPrototype(closed), /Survey is not open/);
+  assert.throws(() => contract.circuits.submitAnonymousResponsePrototype(closed), /Survey is not open/);
   assert.throws(() => contract.circuits.closeSurvey(closed), /Survey is not open/);
   assert.throws(() => contract.circuits.createSurvey(closed, digest, 300n, 400n), /already initialized/);
+});
+
+test("submission transcript rejects duplicate, closed, expired and cross-deployment replay", () => {
+  const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
+  const result = contract.circuits.submitAnonymousResponsePrototype(context);
+  const transcript = {
+    gas: 1000000000n,
+    effects: result.context.transactionContext.effects,
+    program: result.proofData.publicTranscript,
+  };
+  const replayed = context.transactionContext.runTranscript(transcript, runtime.CostModel.dummyCostModel());
+  assert.equal(ledger(replayed.state).responseCount, 1n);
+  assert.deepEqual([...ledger(replayed.state).responses], [...ledger(result.context.transactionContext.state).responses]);
+  assert.throws(() => replayed.runTranscript(transcript, runtime.CostModel.dummyCostModel()));
+  assert.equal(ledger(replayed.state).responseCount, 1n);
+
+  const closed = contract.circuits.closeSurvey(context).context;
+  assert.throws(() => closed.transactionContext.runTranscript(transcript, runtime.CostModel.dummyCostModel()));
+  assert.equal(ledger(closed.transactionContext.state).responseCount, 0n);
+  for (const [time, address] of [
+    [200n, context.transactionContext.address],
+    [150n, runtime.decodeContractAddress(new Uint8Array(32).fill(2))],
+  ]) {
+    const replay = new runtime.QueryContext(context.transactionContext.state, address);
+    replay.block = { secondsSinceEpoch: time, secondsSinceEpochErr: 5, blockHash: "00".repeat(32) };
+    assert.throws(() => replay.runTranscript(transcript, runtime.CostModel.dummyCostModel()));
+    assert.equal(ledger(replay.state).responseCount, 0n);
+    assert.equal(ledger(replay.state).responses.size(), 0n);
+  }
+});
+
+test("response private witnesses stay out of the public ledger and transcript", () => {
+  const { context } = contract.circuits.createSurvey(fresh(), digest, 100n, 200n);
+  const result = contract.circuits.submitAnonymousResponsePrototype(context);
+  const serialize = (value) => JSON.stringify(value, (_, item) => {
+    if (typeof item === "bigint") return item.toString();
+    return item instanceof Uint8Array ? Buffer.from(item).toString("hex") : item;
+  });
+  const publicData = serialize([result.context.transactionContext.state.encode(), result.proofData.publicTranscript]);
+  const privateData = serialize(result.proofData.privateTranscriptOutputs);
+  for (const value of [participantSecret, responseDigest, responseSalt]) {
+    const hex = Buffer.from(value).toString("hex");
+    assert.ok(privateData.includes(hex), "fixture must be present in the private witness transcript");
+    assert.ok(!publicData.includes(hex), "private witness must not be disclosed");
+  }
 });
 
 test("scheduled and expired surveys reject closure and both participant circuits", () => {
