@@ -64,8 +64,8 @@ export circuit checkEligibilityPrototype(): [] {
 
 export circuit submitAnonymousResponsePrototype(): [] {
   checkEligibilityPrototype();
-  const nullifier = disclose(persistentHash<Vector<3, Bytes<32>>>(
-    [pad(32, "proofpulse:nullifier:v1"), metadataDigest, participantSecret()]));
+  const nullifier = disclose(persistentHash<Vector<4, Bytes<32>>>(
+    [pad(32, "proofpulse:nullifier:v1"), kernel.self().bytes, metadataDigest, participantSecret()]));
   assert(!responses.member(nullifier), "Already participated");
   const commitment = disclose(persistentCommit<Vector<4, Bytes<32>>>(
     [pad(32, "proofpulse:response:v1"), metadataDigest, nullifier, responseDigest()],

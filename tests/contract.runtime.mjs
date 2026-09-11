@@ -16,7 +16,7 @@ const contract = new Contract({
   responseSalt: ({ privateState }) => [privateState, privateState.responseSalt],
 });
 
-function fresh(time = 150n, error = 0) {
+function fresh(time = 150n, error = 0, address = runtime.dummyContractAddress()) {
   const initial = contract.initialState(runtime.constructorContext({
     eligible: true, secret: organizerSecret, participantSecret, responseDigest, responseSalt,
   }, "00".repeat(32)));
@@ -24,7 +24,7 @@ function fresh(time = 150n, error = 0) {
     originalState: initial.currentContractState,
     currentPrivateState: initial.currentPrivateState,
     currentZswapLocalState: initial.currentZswapLocalState,
-    transactionContext: new runtime.QueryContext(initial.currentContractState.data, runtime.dummyContractAddress()),
+    transactionContext: new runtime.QueryContext(initial.currentContractState.data, address),
   };
   context.transactionContext.block = { secondsSinceEpoch: time, secondsSinceEpochErr: error, blockHash: "00".repeat(32) };
   return context;
@@ -97,6 +97,24 @@ test("response salt and digest each affect the commitment but not the nullifier"
     const [nextNullifier, nextCommitment] = submit(overrides);
     assert.deepEqual(nextNullifier, nullifier);
     assert.notDeepEqual(nextCommitment, commitment);
+  }
+});
+
+test("nullifiers and commitments bind both survey metadata and deployment address", () => {
+  const submit = (surveyDigest, address) => {
+    const { context } = contract.circuits.createSurvey(fresh(150n, 0, address), surveyDigest, 100n, 200n);
+    const submitted = contract.circuits.submitAnonymousResponsePrototype(context).context;
+    return [...ledger(submitted.transactionContext.state).responses][0];
+  };
+  const firstAddress = runtime.decodeContractAddress(new Uint8Array(32).fill(1));
+  const first = submit(digest, firstAddress);
+  for (const [surveyDigest, address] of [
+    [new Uint8Array(32).fill(41), firstAddress],
+    [digest, runtime.decodeContractAddress(new Uint8Array(32).fill(2))],
+  ]) {
+    const next = submit(surveyDigest, address);
+    assert.notDeepEqual(next[0], first[0]);
+    assert.notDeepEqual(next[1], first[1]);
   }
 });
 
