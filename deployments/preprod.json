@@ -1,0 +1,132 @@
+{
+  "network": "preprod",
+  "compiler": "0.31.1",
+  "language": "0.23.0",
+  "runtime": "0.16.0",
+  "contracts": [
+    {
+      "walletAlias": "02",
+      "walletAddress": "mn_addr_preprod1k2dnvxdrm62lgugue7kh43f0gzuzcgtc4l0vjwckc0f9gu69d0esv3qwhh",
+      "contractAddress": "979d1dcedf1a54ffc822b445d47e9dd12f77924e2e872eabd1bbb3a81f8950da",
+      "deployment": {
+        "txId": "005d0e529cea7f4039bf764c2d29481b32979becb1ea8b1356f4c24d4354ae65ce",
+        "txHash": "c48609df5f5f67d88edddbd01b4d4fa6f5d611844dd6f3afa6b0cc721e77d89a",
+        "blockHash": "7e3fecd6b9e2d0f53adc5cf5ae3e2a2e0909847321e9067e961f89f7aff7346f",
+        "blockHeight": 2533251,
+        "blockTimestamp": 1789312140000,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "008ffb3aa75038a596179e7d7c43854efc3a28662dc2473ff2e5fa81d224c56796",
+          "txHash": "189a24f4c6a558c849a15165fe7fcbbbd8653b2f708e28b8de8532c52f2f0be8",
+          "blockHash": "978bb0ad8aff54c5aa7910f00fd6e2cda03bb04b40b76f337576604a13c6e69f",
+          "blockHeight": 2533256,
+          "blockTimestamp": 1789312170000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "created": true,
+        "closed": false,
+        "responseCount": 0,
+        "enrolledParticipantCount": 0,
+        "responseCommitmentCount": 0,
+        "metadataDigest": "e5da699a8efa92645dd99f8c093fb6e1170d9b362d0f6fd9fc440b50bead671b",
+        "startsAt": 1789313056,
+        "endsAt": 1789399456
+      }
+    },
+    {
+      "walletAlias": "03",
+      "walletAddress": "mn_addr_preprod1h3nry3y7duwtg7atjd7jlkyvlfzckmklaxldp75zwz2ppqgu3e2s9dhunu",
+      "contractAddress": "66d31e19d1ffbd01d5dacf79cda89ab8d626fc1d07b819e42d25e9d5cdc3ea48",
+      "deployment": {
+        "txId": "009dd30a13b070bb803d30433d5aab0e4048d36c62eaaba15882944feceaeea54b",
+        "txHash": "788dd91eca833c4df08209c09b204e2e118d356171797fedafdde8c594997fc5",
+        "blockHash": "ba62e5077a9be32f1c479c5e83b477ca6c36e503e4eb331fed753b0f9858adc9",
+        "blockHeight": 2533324,
+        "blockTimestamp": 1789312578001,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "005af8e1f6872aaf3da6e11a29310c2d2f554fc9977eebee6a2ab3216524744759",
+          "txHash": "7b6cbc8c356df938acb04b19c454eb099768a20a35e93bb2a6d67b64506814d8",
+          "blockHash": "89f2319ccb8f903711ef6ec686f0e9533a39357076b951ac1ad1c90bff223eec",
+          "blockHeight": 2533329,
+          "blockTimestamp": 1789312608000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "created": true,
+        "closed": false,
+        "responseCount": 0,
+        "enrolledParticipantCount": 0,
+        "responseCommitmentCount": 0,
+        "metadataDigest": "29d100067bb5d05af36047717b0ffa92d2f457cc695a0877132dadc562f17403",
+        "startsAt": 1789313498,
+        "endsAt": 1789399898
+      }
+    },
+    {
+      "walletAlias": "imported",
+      "walletAddress": "mn_addr_preprod1lmkn8u69cnxhqetxqp25umer5f4slamacakeun9cdm2nxvd30khs9yy2wj",
+      "contractAddress": "cf91a47c4a8c085aa906dce5b9d9ccde715daa3a5f73e58db88f766db2e30a0e",
+      "deployment": {
+        "txId": "0080f68484e402070b48d05e9bdecfe3383b149f17e9e385df8e1bc35d6f6b295f",
+        "txHash": "b434766a664cd61be7f1d60d30cf25ad68d04414b2822e7a5c6eb77cb7ad2edd",
+        "blockHash": "55de8a411d14f458d82e5d22fdfcdd4b5392564e03b6394b9e42b3889b8947dd",
+        "blockHeight": 2531814,
+        "blockTimestamp": 1789303518000,
+        "status": "SucceedEntirely",
+        "paidFees": "1"
+      },
+      "smokeTransactions": [
+        {
+          "txId": "00e4d635bfbdc3daf298a10544b924e44efe182cda5258741cd63dacfd90e80f27",
+          "txHash": "0f51db75113924b673ff95447f5dc68dbad8909e24f91643a2c13ecf6210cc40",
+          "blockHash": "ba2526f4f0c59989c5de2a2f14414ecee30a3c9c712c53682ddd13c29f1e3a5b",
+          "blockHeight": 2531819,
+          "blockTimestamp": 1789303548000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        },
+        {
+          "txId": "00bde8cae80ea55c4d20875b5fadacc4edd17f52a64eeb65c673b0aabfabb0e935",
+          "txHash": "eaf77e77ad1fa08fcf82a24250faf440d287b210c859eeb435eec02105c91f0f",
+          "blockHash": "b654e8678c3f215a5c2631a2a441521110f8e8ea27499778c0ffff1146c83ef8",
+          "blockHeight": 2531824,
+          "blockTimestamp": 1789303578001,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        },
+        {
+          "txId": "00111f76548d8ee9180aa6289be1f0799181085ebb7eef52c0153d45afc544d049",
+          "txHash": "06495e1b359966257422db09c9c58b4138a4062d1b2f4c1a051038f565c18263",
+          "blockHash": "3dbb717e50edd2348e9dbd7062acb8b1d7b5cdb7a73ca5b4be625e865c0e5379",
+          "blockHeight": 2531972,
+          "blockTimestamp": 1789304466000,
+          "status": "SucceedEntirely",
+          "paidFees": "1"
+        }
+      ],
+      "state": {
+        "created": true,
+        "closed": false,
+        "responseCount": 1,
+        "enrolledParticipantCount": 1,
+        "responseCommitmentCount": 1,
+        "metadataDigest": "1b82fa106e8bcc5919c5ceb54dc298e8963c5216f6459fbfca9f75e18268173b",
+        "startsAt": 1789304434,
+        "endsAt": 1789390834
+      }
+    }
+  ]
+}
+

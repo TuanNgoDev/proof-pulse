@@ -22,4 +22,4 @@ Survey timing, metadata digest, enrollment commitments, response nullifiers/comm
 
 Enrollment is organizer approval, not verified human uniqueness. The contract does not validate response semantics, open commitments, aggregate answers, recover secrets, or provide organizational identity. The hosted survey UI remains database-backed and does not submit Midnight transactions.
 
-Confirmed Preprod addresses and transaction evidence are added only after indexer verification.
+The three indexer-verified addresses, deployment transactions, smoke calls, public states, and exact toolchain versions are published in [`deployments/preprod.json`](../deployments/preprod.json).

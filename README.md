@@ -3,13 +3,9 @@
 **Live web preview:** https://proof-pulse-gamma.vercel.app
 
 Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
-reloads in the same browser workspace. Hosting is live; Midnight proofs and response
-submission remain development demonstrations, not a live blockchain integration.
-
-**Current progress: ~39%** — a rough product-scope estimate, not measured completion.
-Persisted survey lifecycle management now works locally; most proof, collection,
-authentication and aggregation work remains. The hosted preview above has not been
-updated by this iteration.
+reloads in the same browser workspace. The browser workflow remains off-chain, while
+three independent Compact contract instances and proof-backed smoke transactions are
+verified on Midnight Preprod.
 
 ProofPulse is a verified anonymous survey and feedback prototype. It explores how
 organizations could hear candid feedback from eligible participants without
@@ -24,9 +20,10 @@ collecting identities alongside individual responses.
 - Response form gated by survey window and survey-bound demo eligibility.
 - Private form state isolated from public metadata; simulated submit clears text.
 - Domain interfaces for future participant proofs, nullifiers and atomic claims.
-- Compact prototype with constructor-bound organizer authorization, kernel-time window,
-  irreversible early closure, salted response commitments and per-secret duplicate guards.
-  These are compiled-runtime features only, not connected to the UI or a blockchain.
+- Compact contract with constructor-bound organizer authorization, explicit participant
+  enrollment, kernel-time windows, irreversible closure, salted response commitments,
+  and per-secret duplicate guards. It is release-compiled and separately deployed to
+  Midnight Preprod; the hosted UI does not call it.
 - Loading, empty, missing-survey, form validation and route error states.
 - Real domain tests using Node's test runner, TypeScript and ESLint checks.
 - PostgreSQL/Drizzle persistence for survey metadata in an anonymous browser workspace.
@@ -201,22 +198,29 @@ protocol timestamp.
 
 ## Midnight / Compact status
 
-`contracts/survey.compact` was checked with Compact compiler 0.26.0, language 0.18.0,
-using `--skip-zk`. It models single-survey creation, date ordering and an explicitly
-untrusted eligibility witness. Constructor-bound private-secret authorization protects
-creation/early closure; kernel time gates participation. `pnpm test:contract` compiles
-and executes real generated circuits using pinned runtime 0.9.0, including adversarial
-local transcript replay. The contract-only submission prototype records a salted
-response commitment and a metadata/deployment-bound nullifier, rejecting a second
-submission under the same participant secret even with a different answer or salt.
-**This is not one-person-one-response:** changing the secret bypasses that per-secret
-limit, and eligibility remains an untrusted Boolean witness. No issuer membership
-proof exists. Public nullifiers and counts expose participation information; this
-is not a production anonymity guarantee. The UI still only simulates submission.
+`contracts/survey.compact` is release-compiled with **Compact compiler 0.31.1,
+language 0.23.0, and runtime 0.16.0**. The full compile emits prover, verifier, and
+ZKIR assets. Seventeen contract/runtime tests cover organizer authorization,
+participant enrollment, time windows, salted commitments, privacy boundaries, and
+replay rejection.
 
-Compilation is real; production membership proof verification, proof generation,
-wallet connection, deployment, and network interaction are **not implemented**.
-No raw response is put on a ledger. See [contract notes](contracts/README.md).
+### Verified Preprod matrix
+
+| Wallet | Contract stream | Deploy transaction | Smoke transaction |
+|---|---|---|---|
+| 02 | [`979d1dce…50da`](https://explorer.preprod.midnight.network/contracts/stream/979d1dcedf1a54ffc822b445d47e9dd12f77924e2e872eabd1bbb3a81f8950da) | [`005d0e52…65ce`](https://explorer.preprod.midnight.network/transactions/005d0e529cea7f4039bf764c2d29481b32979becb1ea8b1356f4c24d4354ae65ce) | [`createSurvey`](https://explorer.preprod.midnight.network/transactions/008ffb3aa75038a596179e7d7c43854efc3a28662dc2473ff2e5fa81d224c56796) |
+| 03 | [`66d31e19…ea48`](https://explorer.preprod.midnight.network/contracts/stream/66d31e19d1ffbd01d5dacf79cda89ab8d626fc1d07b819e42d25e9d5cdc3ea48) | [`009dd30a…a54b`](https://explorer.preprod.midnight.network/transactions/009dd30a13b070bb803d30433d5aab0e4048d36c62eaaba15882944feceaeea54b) | [`createSurvey`](https://explorer.preprod.midnight.network/transactions/005af8e1f6872aaf3da6e11a29310c2d2f554fc9977eebee6a2ab3216524744759) |
+| imported | [`cf91a47c…0a0e`](https://explorer.preprod.midnight.network/contracts/stream/cf91a47c4a8c085aa906dce5b9d9ccde715daa3a5f73e58db88f766db2e30a0e) | [`0080f684…295f`](https://explorer.preprod.midnight.network/transactions/0080f68484e402070b48d05e9bdecfe3383b149f17e9e385df8e1bc35d6f6b295f) | [`create → enroll → submit`](https://explorer.preprod.midnight.network/transactions/00111f76548d8ee9180aa6289be1f0799181085ebb7eef52c0153d45afc544d049) |
+
+All eight listed deployment/smoke transactions were read back from the indexer as
+`SucceedEntirely`. Exact wallet addresses, block evidence, fees, and aggregate public
+state are in [deployments/preprod.json](deployments/preprod.json).
+
+The canary response was accepted only after the on-chain start time and produced one
+response commitment. **This is not one-person-one-response:** organizer enrollment is
+approval of a secret commitment, not verified human uniqueness. Public timing,
+nullifiers, and counts remain linkable; raw response content is never placed on the
+ledger. The hosted UI still only simulates submission. See [contract notes](contracts/README.md).
 
 Reference material: [Next.js installation](https://nextjs.org/docs/app/getting-started/installation)
 and [Compact language reference](https://docs.midnight.network/compact/reference/compact-reference).
@@ -228,7 +232,7 @@ and [Compact language reference](https://docs.midnight.network/compact/reference
 2. Replace the development scenario with reviewed eligible-group proof constraints.
 3. Bind participant secrets to verified credentials; validate commitment/nullifier
    atomicity and concurrency on the network.
-4. Integrate wallet, proof provider and deployment with adversarial contract tests.
+4. Integrate the hosted UI with a supported wallet and proof provider; retain the adversarial contract tests at that boundary.
 5. Add secure collection and aggregate publication with an explicit disclosure policy.
 
 Production nullifiers, demographic analytics, anonymous follow-ups, and complex
