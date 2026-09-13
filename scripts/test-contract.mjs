@@ -30,7 +30,7 @@ assert.equal(info["language-version"], "0.23.0");
 assert.equal(info["runtime-version"], "0.16.0");
 
 if (!compileOnly) {
-  const tests = spawnSync(process.execPath, ["--test", "tests/contract.runtime.mjs"], { cwd: root, stdio: "inherit" });
+  const tests = spawnSync(process.execPath, ["--test", "tests/contract.runtime.mjs", "tests/preprod-adapter.mjs"], { cwd: root, stdio: "inherit" });
   if (tests.error) throw tests.error;
   if (tests.status !== 0) process.exit(tests.status ?? 1);
 }
