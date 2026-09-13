@@ -2,13 +2,14 @@ pragma language_version >= 0.23;
 
 import CompactStandardLibrary;
 
-// Compile-checkable concept only. No UI integration or deployed contract.
+// One contract instance represents one survey; response payloads stay private.
 export ledger created: Boolean;
 export ledger closed: Boolean;
 export ledger metadataDigest: Bytes<32>;
 export ledger startsAt: Uint<64>;
 export ledger endsAt: Uint<64>;
 export sealed ledger organizerCommitment: Bytes<32>;
+export ledger enrolledParticipants: Set<Bytes<32>>;
 export ledger responses: Map<Bytes<32>, Bytes<32>>;
 export ledger responseCount: Counter;
 
@@ -27,12 +28,19 @@ circuit assertOrganizer(): [] {
   assert(organizerIdentity(organizerSecret()) == organizerCommitment, "Unauthorized organizer");
 }
 
-// UNTRUSTED prototype witness: not membership verification. Must be replaced
-// with issuer-bound credential constraints before production participation.
-witness developmentEligibility(): Boolean;
 witness participantSecret(): Bytes<32>;
 witness responseDigest(): Bytes<32>;
 witness responseSalt(): Bytes<32>;
+
+export pure circuit participantIdentity(
+  deployment: Bytes<32>,
+  survey: Bytes<32>,
+  secret: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<4, Bytes<32>>>([
+    pad(32, "proofpulse:participant:v2"), deployment, survey, secret
+  ]);
+}
 
 export circuit createSurvey(digest: Bytes<32>, start: Uint<64>, end: Uint<64>): [] {
   assertOrganizer();
@@ -57,16 +65,26 @@ export circuit closeSurvey(): [] {
   closed = true;
 }
 
-export circuit checkEligibilityPrototype(): [] {
-  assertOpen();
-  assert(developmentEligibility(), "Development eligibility rejected");
+export circuit enrollParticipant(commitment: Bytes<32>): [] {
+  assertOrganizer();
+  assert(created, "Survey must exist");
+  assert(!closed, "Survey is closed");
+  assert(kernel.blockTimeLessThan(startsAt), "Survey already started");
+  assert(disclose(commitment) != default<Bytes<32>>, "Missing participant commitment");
+  assert(!enrolledParticipants.member(disclose(commitment)), "Participant already enrolled");
+  enrolledParticipants.insert(disclose(commitment));
 }
 
-export circuit submitAnonymousResponsePrototype(): [] {
-  checkEligibilityPrototype();
-  // Prototype only: fresh secrets bypass this limit until bound to real credentials.
+export circuit submitAnonymousResponse(): [] {
+  assertOpen();
+  const participant = participantIdentity(
+    kernel.self().bytes,
+    metadataDigest,
+    participantSecret()
+  );
+  assert(enrolledParticipants.member(disclose(participant)), "Participant is not enrolled");
   const nullifier = disclose(persistentHash<Vector<4, Bytes<32>>>(
-    [pad(32, "proofpulse:nullifier:v1"), kernel.self().bytes, metadataDigest, participantSecret()]));
+    [pad(32, "proofpulse:nullifier:v2"), kernel.self().bytes, metadataDigest, participant]));
   assert(!responses.member(nullifier), "Already participated");
   const commitment = disclose(persistentCommit<Vector<4, Bytes<32>>>(
     [pad(32, "proofpulse:response:v1"), metadataDigest, nullifier, responseDigest()],

@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import * as runtime from "@midnight-ntwrk/compact-runtime";
-import { Contract, ledger } from "../.compact-build/contract/index.js";
+import { Contract, ledger, pureCircuits } from "../.compact-build/contract/index.js";
 
 const digest = new Uint8Array(32).fill(3);
 const organizerSecret = new Uint8Array(32).fill(7);
 const participantSecret = new Uint8Array(32).fill(11);
+const secondParticipant = new Uint8Array(32).fill(12);
 const responseDigest = new Uint8Array(32).fill(13);
 const responseSalt = new Uint8Array(32).fill(17);
 const replayGas = {
@@ -15,7 +16,6 @@ const replayGas = {
   bytesDeleted: 10n ** 18n,
 };
 const contract = new Contract({
-  developmentEligibility: ({ privateState }) => [privateState, privateState.eligible],
   organizerSecret: ({ privateState }) => [privateState, privateState.secret],
   participantSecret: ({ privateState }) => [privateState, privateState.participantSecret],
   responseDigest: ({ privateState }) => [privateState, privateState.responseDigest],
@@ -24,7 +24,7 @@ const contract = new Contract({
 
 function fresh(time = 150n, error = 0, address = runtime.dummyContractAddress()) {
   const initial = contract.initialState(runtime.createConstructorContext({
-    eligible: true, secret: organizerSecret, participantSecret, responseDigest, responseSalt,
+    secret: organizerSecret, participantSecret, responseDigest, responseSalt,
   }, "00".repeat(32)));
   const context = {
     currentPrivateState: initial.currentPrivateState,
@@ -41,9 +41,58 @@ function fresh(time = 150n, error = 0, address = runtime.dummyContractAddress())
   return context;
 }
 
+function participantCommitment(context, secret = participantSecret, surveyDigest = digest) {
+  return pureCircuits.participantIdentity(
+    runtime.encodeContractAddress(context.currentQueryContext.address),
+    surveyDigest,
+    secret,
+  );
+}
+
+function ready(time = 150n, error = 0, address = runtime.dummyContractAddress(), surveyDigest = digest, participants = [participantSecret]) {
+  let { context } = contract.impureCircuits.createSurvey(fresh(50n, error, address), surveyDigest, 100n, 200n);
+  for (const secret of participants) {
+    context = contract.impureCircuits.enrollParticipant(context, participantCommitment(context, secret, surveyDigest)).context;
+  }
+  context.currentQueryContext.block = {
+    ...context.currentQueryContext.block,
+    secondsSinceEpoch: time,
+    secondsSinceEpochErr: error,
+  };
+  return context;
+}
+
+test("organizer enrolls a nonzero participant before the start only", () => {
+  let { context } = contract.impureCircuits.createSurvey(fresh(50n), digest, 100n, 200n);
+  const commitment = participantCommitment(context);
+  context.currentPrivateState.secret = new Uint8Array(32).fill(8);
+  assert.throws(() => contract.impureCircuits.enrollParticipant(context, commitment), /organizer/i);
+  context.currentPrivateState.secret = organizerSecret;
+  context = contract.impureCircuits.enrollParticipant(context, commitment).context;
+  assert.equal(ledger(context.currentQueryContext.state).enrolledParticipants.member(commitment), true);
+  assert.throws(() => contract.impureCircuits.enrollParticipant(context, commitment), /already enrolled/i);
+  assert.throws(() => contract.impureCircuits.enrollParticipant(context, new Uint8Array(32)), /missing/i);
+  context.currentQueryContext.block = { ...context.currentQueryContext.block, secondsSinceEpoch: 100n };
+  assert.throws(() => contract.impureCircuits.enrollParticipant(context, participantCommitment(context, secondParticipant)), /started/i);
+});
+
+test("only an enrolled participant can submit one response", () => {
+  let { context } = contract.impureCircuits.createSurvey(fresh(50n), digest, 100n, 200n);
+  const commitment = participantCommitment(context);
+  context = contract.impureCircuits.enrollParticipant(context, commitment).context;
+  context.currentQueryContext.block = { ...context.currentQueryContext.block, secondsSinceEpoch: 100n };
+  context = contract.impureCircuits.submitAnonymousResponse(context).context;
+  assert.equal(ledger(context.currentQueryContext.state).responseCount, 1n);
+  context.currentPrivateState.responseDigest = new Uint8Array(32).fill(19);
+  context.currentPrivateState.responseSalt = new Uint8Array(32).fill(23);
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(context), /already participated/i);
+  context.currentPrivateState.participantSecret = secondParticipant;
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(context), /not enrolled/i);
+});
+
 test("a caller without constructor organizer secret cannot front-run initialization", () => {
   const context = fresh();
-  context.currentPrivateState = { eligible: true, secret: new Uint8Array(32).fill(8) };
+  context.currentPrivateState = { ...context.currentPrivateState, secret: new Uint8Array(32).fill(8) };
   assert.throws(() => contract.impureCircuits.createSurvey(context, digest, 100n, 200n), /Unauthorized organizer/);
   assert.equal(ledger(context.currentQueryContext.state).created, false);
 });
@@ -56,9 +105,9 @@ test("public commitment is not an organizer credential", () => {
 
 test("participation enforces inclusive start and exclusive end from kernel time", () => {
   for (const [time, allowed] of [[99n, false], [100n, true], [199n, true], [200n, false]]) {
-    const { context } = contract.impureCircuits.createSurvey(fresh(time), digest, 100n, 200n);
-    if (allowed) assert.doesNotThrow(() => contract.impureCircuits.checkEligibilityPrototype(context));
-    else assert.throws(() => contract.impureCircuits.checkEligibilityPrototype(context), /Survey is not open/);
+    const context = ready(time);
+    if (allowed) assert.doesNotThrow(() => contract.impureCircuits.submitAnonymousResponse(context));
+    else assert.throws(() => contract.impureCircuits.submitAnonymousResponse(context), /Survey is not open/);
   }
 });
 
@@ -70,8 +119,8 @@ test("initialization persists metadata once and rejects invalid schedules", () =
 });
 
 test("an open survey records one salted response commitment per participant secret", () => {
-  const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
-  const submitted = contract.impureCircuits.submitAnonymousResponsePrototype(context).context;
+  const context = ready(150n, 0, runtime.dummyContractAddress(), digest, [participantSecret, new Uint8Array(32).fill(29)]);
+  const submitted = contract.impureCircuits.submitAnonymousResponse(context).context;
   const state = ledger(submitted.currentQueryContext.state);
   assert.equal(state.responseCount, 1n);
   assert.equal(state.responses.size(), 1n);
@@ -84,20 +133,20 @@ test("an open survey records one salted response commitment per participant secr
   }
   submitted.currentPrivateState.responseDigest = new Uint8Array(32).fill(19);
   submitted.currentPrivateState.responseSalt = new Uint8Array(32).fill(23);
-  assert.throws(() => contract.impureCircuits.submitAnonymousResponsePrototype(submitted), /Already participated/);
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(submitted), /Already participated/);
   assert.equal(ledger(submitted.currentQueryContext.state).responseCount, 1n);
   assert.deepEqual([...ledger(submitted.currentQueryContext.state).responses], [[nullifier, commitment]]);
   submitted.currentPrivateState.participantSecret = new Uint8Array(32).fill(29);
-  const second = contract.impureCircuits.submitAnonymousResponsePrototype(submitted).context;
+  const second = contract.impureCircuits.submitAnonymousResponse(submitted).context;
   assert.equal(ledger(second.currentQueryContext.state).responseCount, 2n);
   assert.equal(ledger(second.currentQueryContext.state).responses.size(), 2n);
 });
 
 test("response salt and digest each affect the commitment but not the nullifier", () => {
   const submit = (overrides) => {
-    const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
+    const context = ready();
     Object.assign(context.currentPrivateState, overrides);
-    const submitted = contract.impureCircuits.submitAnonymousResponsePrototype(context).context;
+    const submitted = contract.impureCircuits.submitAnonymousResponse(context).context;
     return [...ledger(submitted.currentQueryContext.state).responses][0];
   };
   const [nullifier, commitment] = submit({});
@@ -113,8 +162,8 @@ test("response salt and digest each affect the commitment but not the nullifier"
 
 test("nullifiers and commitments bind both survey metadata and deployment address", () => {
   const submit = (surveyDigest, address) => {
-    const { context } = contract.impureCircuits.createSurvey(fresh(150n, 0, address), surveyDigest, 100n, 200n);
-    const submitted = contract.impureCircuits.submitAnonymousResponsePrototype(context).context;
+    const context = ready(150n, 0, address, surveyDigest);
+    const submitted = contract.impureCircuits.submitAnonymousResponse(context).context;
     return [...ledger(submitted.currentQueryContext.state).responses][0];
   };
   const firstAddress = runtime.decodeContractAddress(new Uint8Array(32).fill(1));
@@ -129,13 +178,10 @@ test("nullifiers and commitments bind both survey metadata and deployment addres
   }
 });
 
-test("participant entry points reject missing survey and false eligibility", () => {
-  for (const name of ["checkEligibilityPrototype", "submitAnonymousResponsePrototype"]) {
-    assert.throws(() => contract.impureCircuits[name](fresh()), /Survey must exist/);
-    const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
-    context.currentPrivateState.eligible = false;
-    assert.throws(() => contract.impureCircuits[name](context), /Development eligibility rejected/);
-  }
+test("submission rejects a missing survey and an unenrolled participant", () => {
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(fresh()), /Survey must exist/);
+  const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(context), /not enrolled/i);
 });
 
 test("only organizer can close an open survey and closure cannot reopen it", () => {
@@ -146,15 +192,14 @@ test("only organizer can close an open survey and closure cannot reopen it", () 
   const closed = contract.impureCircuits.closeSurvey(context).context;
   assert.equal(ledger(closed.currentQueryContext.state).closed, true);
   assert.equal(ledger(closed.currentQueryContext.state).endsAt, 200n);
-  assert.throws(() => contract.impureCircuits.checkEligibilityPrototype(closed), /Survey is not open/);
-  assert.throws(() => contract.impureCircuits.submitAnonymousResponsePrototype(closed), /Survey is not open/);
+  assert.throws(() => contract.impureCircuits.submitAnonymousResponse(closed), /Survey is not open/);
   assert.throws(() => contract.impureCircuits.closeSurvey(closed), /Survey is not open/);
   assert.throws(() => contract.impureCircuits.createSurvey(closed, digest, 300n, 400n), /already initialized/);
 });
 
 test("submission transcript rejects duplicate, closed, expired and cross-deployment replay", () => {
-  const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
-  const result = contract.impureCircuits.submitAnonymousResponsePrototype(context);
+  const context = ready();
+  const result = contract.impureCircuits.submitAnonymousResponse(context);
   const transcript = {
     gas: replayGas,
     effects: result.context.currentQueryContext.effects,
@@ -187,8 +232,8 @@ test("submission transcript rejects duplicate, closed, expired and cross-deploym
 });
 
 test("response private witnesses stay out of the public ledger and transcript", () => {
-  const { context } = contract.impureCircuits.createSurvey(fresh(), digest, 100n, 200n);
-  const result = contract.impureCircuits.submitAnonymousResponsePrototype(context);
+  const context = ready();
+  const result = contract.impureCircuits.submitAnonymousResponse(context);
   const serialize = (value) => JSON.stringify(value, (_, item) => {
     if (typeof item === "bigint") return item.toString();
     return item instanceof Uint8Array ? Buffer.from(item).toString("hex") : item;
@@ -202,10 +247,10 @@ test("response private witnesses stay out of the public ledger and transcript", 
   }
 });
 
-test("scheduled and expired surveys reject closure and both participant circuits", () => {
+test("scheduled and expired surveys reject closure and submission", () => {
   for (const time of [99n, 200n]) {
-    const { context } = contract.impureCircuits.createSurvey(fresh(time), digest, 100n, 200n);
-    for (const name of ["closeSurvey", "checkEligibilityPrototype", "submitAnonymousResponsePrototype"]) {
+    const context = ready(time);
+    for (const name of ["closeSurvey", "submitAnonymousResponse"]) {
       assert.throws(() => contract.impureCircuits[name](context), /Survey is not open/);
     }
   }
@@ -213,12 +258,12 @@ test("scheduled and expired surveys reject closure and both participant circuits
 
 test("nonzero block uncertainty does not bypass local window checks", () => {
   for (const [time, allowed] of [[99n, false], [100n, true], [150n, true], [199n, true], [200n, false]]) {
-    const { context } = contract.impureCircuits.createSurvey(fresh(time, 5), digest, 100n, 200n);
+    const context = ready(time, 5);
     if (!allowed) {
-      assert.throws(() => contract.impureCircuits.checkEligibilityPrototype(context), /Survey is not open/);
+      assert.throws(() => contract.impureCircuits.submitAnonymousResponse(context), /Survey is not open/);
       continue;
     }
-    const result = contract.impureCircuits.checkEligibilityPrototype(context);
+    const result = contract.impureCircuits.submitAnonymousResponse(context);
     const transcript = { gas: replayGas, effects: result.context.currentQueryContext.effects, program: result.proofData.publicTranscript };
     assert.doesNotThrow(() => context.currentQueryContext.runTranscript(transcript, runtime.CostModel.initialCostModel()));
     for (const replayTime of [99n, 200n]) {
