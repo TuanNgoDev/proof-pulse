@@ -1,14 +1,36 @@
-import { execFileSync } from "node:child_process";
+import assert from "node:assert/strict";
+import { execFileSync, spawnSync } from "node:child_process";
+import { readFileSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const windows = process.platform === "win32";
-const command = windows ? "wsl" : "compactc";
-const prefix = windows ? ["-d", "Ubuntu", "--", "compactc"] : [];
-const compilerRoot = windows
-  ? execFileSync("wsl", ["-d", "Ubuntu", "--", "wslpath", "-a", root.replaceAll("\\", "/")], { encoding: "utf8" }).trim()
-  : root;
-const version = execFileSync(command, [...prefix, "--version"], { encoding: "utf8" }).trim();
-if (version !== "0.26.0") throw new Error(`Expected Compact 0.26.0, received ${version}`);
-execFileSync(command, [...prefix, "--skip-zk", `${compilerRoot}/contracts/survey.compact`, `${compilerRoot}/.compact-build`], { stdio: "inherit" });
-execFileSync(process.execPath, ["--test", "tests/contract.runtime.mjs"], { cwd: root, stdio: "inherit" });
+const fast = process.argv.includes("--fast");
+const compileOnly = process.argv.includes("--compile-only");
+const args = [
+  "compile",
+  "+0.31.1",
+  ...(fast ? ["--skip-zk"] : []),
+  "contracts/survey.compact",
+  ".compact-build",
+];
+rmSync(`${root}.compact-build`, { recursive: true, force: true });
+
+const result = process.platform === "win32"
+  ? spawnSync("wsl", [
+      "-d", "Ubuntu", "--", "bash", "-lc",
+      `cd '${execFileSync("wsl", ["-d", "Ubuntu", "--", "wslpath", "-a", root.replaceAll("\\", "/")], { encoding: "utf8" }).trim()}' && compact ${args.join(" ")}`,
+    ], { stdio: "inherit" })
+  : spawnSync("compact", args, { cwd: root, stdio: "inherit" });
+if (result.error) throw result.error;
+if (result.status !== 0) process.exit(result.status ?? 1);
+
+const info = JSON.parse(readFileSync(`${root}.compact-build/compiler/contract-info.json`, "utf8"));
+assert.equal(info["compiler-version"], "0.31.1");
+assert.equal(info["language-version"], "0.23.0");
+assert.equal(info["runtime-version"], "0.16.0");
+
+if (!compileOnly) {
+  const tests = spawnSync(process.execPath, ["--test", "tests/contract.runtime.mjs"], { cwd: root, stdio: "inherit" });
+  if (tests.error) throw tests.error;
+  if (tests.status !== 0) process.exit(tests.status ?? 1);
+}
