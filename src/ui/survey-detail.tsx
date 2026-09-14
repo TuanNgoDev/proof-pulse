@@ -74,6 +74,10 @@ export function SurveyDetail({ id }: { id: string }) {
               <dd>{format(survey.endsAt)}</dd>
             </div>
             {survey.closedAt && <div><dt>Closed early · UTC</dt><dd>{format(survey.closedAt)}</dd></div>}
+            <div>
+              <dt>Response commitments</dt>
+              <dd>{survey.responseCount}</dd>
+            </div>
           </dl>
           <section className="stack">
             <h2>Who we’re listening to</h2>

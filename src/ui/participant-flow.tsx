@@ -9,11 +9,15 @@ import {
   type EligibilityResult,
 } from "@/domain/participant/eligibility";
 import { surveyStatus } from "@/domain/survey/survey";
+import {
+  getOrCreateParticipantSecret,
+  prepareResponseEnvelope,
+} from "@/domain/privacy/protocol";
 import { verifyDevelopmentEligibility } from "@/infrastructure/development-eligibility";
 import { Arrow, Shield } from "./icons";
 
 export function ParticipantFlow({ id }: { id: string }) {
-  const { surveys, now, changeSurvey } = useSurveySession();
+  const { surveys, now, changeSurvey, recordResponse } = useSurveySession();
   const survey = surveys.find((item) => item.id === id);
   const [outcome, setOutcome] = useState<"eligible" | "ineligible">("eligible");
   const [eligibility, setEligibility] = useState<EligibilityResult | null>(
@@ -23,7 +27,11 @@ export function ParticipantFlow({ id }: { id: string }) {
   const [submitting, setSubmitting] = useState(false);
   // Private response is component-local; never passed to the public survey session.
   const [response, setResponse] = useState("");
-  const [completed, setCompleted] = useState(false);
+  const [receipt, setReceipt] = useState<{
+    id: string;
+    commitment: string;
+    privateSalt: string;
+  } | null>(null);
   const [error, setError] = useState("");
   if (!survey)
     return (
@@ -66,10 +74,18 @@ export function ParticipantFlow({ id }: { id: string }) {
     setSubmitting(true);
     setError("");
     try {
-      // Only the survey id crosses the server boundary; response text stays in this component.
-      await changeSurvey(id, "check");
+      const prepared = await prepareResponseEnvelope(
+        id,
+        response,
+        getOrCreateParticipantSecret(id),
+      );
+      const accepted = await recordResponse(prepared.publicEnvelope);
       setResponse("");
-      setCompleted(true);
+      setReceipt({
+        id: accepted.id,
+        commitment: accepted.commitment,
+        privateSalt: prepared.privateSalt,
+      });
     } catch (cause) {
       setEligibility(null);
       setError(cause instanceof Error ? cause.message : "Could not confirm the survey is still open.");
@@ -94,17 +110,17 @@ export function ParticipantFlow({ id }: { id: string }) {
               {error}
             </p>
           )}
-          {completed ? (
+          {receipt ? (
             <section className="success" role="status">
-              <h2>Thanks for trying the flow.</h2>
+              <h2>Private response commitment recorded.</h2>
               <p style={{ marginTop: 12 }}>
-                Your response text was cleared from the form. No response was saved,
-                sent, or published. Only the survey’s open status was checked on the server. This was a local submission simulation—not a
-                collected survey response.
+                Your response text was hashed in this browser and cleared. Only
+                its opaque commitment and survey-scoped nullifier were stored.
               </p>
               <p className="small" style={{ marginTop: 12 }}>
-                Repeat participation is not prevented. Production nullifiers and
-                aggregation are future work.
+                Receipt: {receipt.id}<br />
+                Commitment: {receipt.commitment}<br />
+                Keep this private salt locally: {receipt.privateSalt}
               </p>
               <Link href="/" className="button teal" style={{ marginTop: 22 }}>
                 Back to surveys <Arrow />
@@ -195,7 +211,7 @@ export function ParticipantFlow({ id }: { id: string }) {
                     />
                     <p id="response-note" className="hint">
                       {canRespond(survey, eligibility, now)
-                        ? "Local component memory only. Submitting checks the survey status on the server, then clears this text without sending it."
+                        ? "Hashed in this browser. Only an opaque commitment and nullifier are submitted."
                         : "Verify demo eligibility above to unlock the response form."}
                     </p>
                   </div>
@@ -204,7 +220,7 @@ export function ParticipantFlow({ id }: { id: string }) {
                     disabled={submitting || verifying || !canRespond(survey, eligibility, now)}
                     className="button"
                   >
-                    {submitting ? "Checking survey…" : "Simulate private submission"} <Arrow />
+                    {submitting ? "Committing response…" : "Submit private commitment"} <Arrow />
                   </button>
                 </form>
               </section>
@@ -242,7 +258,7 @@ export function ParticipantFlow({ id }: { id: string }) {
               <div>
                 <strong>Response: Private</strong>
                 <span className="muted">
-                  Visible only in this form; not encrypted or durably stored.
+                  Text stays local; only a one-way commitment is stored.
                 </span>
               </div>
             </li>

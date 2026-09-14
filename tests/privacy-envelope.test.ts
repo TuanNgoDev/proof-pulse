@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { prepareResponseEnvelope } from "../src/domain/privacy/protocol";
+import {
+  getOrCreateParticipantSecret,
+  prepareResponseEnvelope,
+} from "../src/domain/privacy/protocol";
 
 test("response envelopes bind survey and response while exposing only commitment and nullifier", async () => {
   const secret = "11".repeat(32);
@@ -26,4 +29,17 @@ test("response envelopes reject malformed identifiers and private entropy", asyn
   await assert.rejects(prepareResponseEnvelope("survey", " ", "11".repeat(32), "22".repeat(32)));
   await assert.rejects(prepareResponseEnvelope("survey", "response", "short", "22".repeat(32)));
   await assert.rejects(prepareResponseEnvelope("survey", "response", "11".repeat(32), "UPPER".repeat(13)));
+});
+
+test("browser participant secrets stay stable per survey and replace malformed storage", () => {
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+  };
+  const first = getOrCreateParticipantSecret("survey-a", storage);
+  assert.equal(getOrCreateParticipantSecret("survey-a", storage), first);
+  assert.notEqual(getOrCreateParticipantSecret("survey-b", storage), first);
+  values.set("proofpulse:participant:survey-a", "broken");
+  assert.match(getOrCreateParticipantSecret("survey-a", storage), /^[a-f0-9]{64}$/);
 });

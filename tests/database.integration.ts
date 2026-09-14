@@ -92,6 +92,10 @@ test("PostgreSQL seeds once, persists refresh reads and isolates browser workspa
       .where(eq(schema.responseCommitments.surveyId, saved.id));
     assert.ok(storedReceipt);
     assert.equal("response" in storedReceipt, false);
+    assert.equal(
+      (await loadWorkspaceSurveys(key, db)).find((item) => item.id === saved.id)?.responseCount,
+      1,
+    );
     await assert.rejects(recordResponseCommitment(key, {
       surveyId: saved.id,
       commitment: "33".repeat(32),

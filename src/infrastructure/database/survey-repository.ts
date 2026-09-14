@@ -37,16 +37,29 @@ export async function changeWorkspaceSurvey(
     const clock = await tx.execute<{ now: string }>(sql`select clock_timestamp()::text as now`);
     const time = Date.parse(clock.rows[0].now);
     const status = surveyStatus(current, time);
+    let result = current;
     if (operation === "edit") {
       if (status !== "Scheduled" || !fields || Date.parse(fields.startsAt) <= time)
         throw new RangeError("Only not-yet-open surveys can be edited; choose a future start.");
       const [saved] = await tx.update(surveys).set(fields).where(scope).returning(publicColumns);
-      return saved;
+      result = saved;
+    } else {
+      if (status !== "Open") throw new RangeError("This survey is no longer open. Refresh its details.");
+      if (operation === "close") {
+        const [saved] = await tx.update(surveys).set({ closedAt: new Date(time).toISOString() }).where(scope).returning(publicColumns);
+        result = saved;
+      }
     }
-    if (status !== "Open") throw new RangeError("This survey is no longer open. Refresh its details.");
-    if (operation === "check") return current;
-    const [saved] = await tx.update(surveys).set({ closedAt: new Date(time).toISOString() }).where(scope).returning(publicColumns);
-    return saved;
+    const [total] = await tx
+      .select({ value: count() })
+      .from(responseCommitments)
+      .where(
+        and(
+          eq(responseCommitments.workspaceId, key),
+          eq(responseCommitments.surveyId, surveyId),
+        ),
+      );
+    return { ...result, responseCount: total.value };
   });
 }
 
@@ -64,12 +77,19 @@ export async function loadWorkspaceSurveys(
       await tx
         .insert(surveys)
         .values(demoSurveys.map((survey) => ({ ...survey, workspaceId: key })));
-    return tx
+    const rows = await tx
       .select(publicColumns)
       .from(surveys)
       .where(eq(surveys.workspaceId, key))
       .orderBy(desc(surveys.createdAt), surveys.id)
       .limit(500);
+    const totals = await tx
+      .select({ surveyId: responseCommitments.surveyId, value: count() })
+      .from(responseCommitments)
+      .where(eq(responseCommitments.workspaceId, key))
+      .groupBy(responseCommitments.surveyId);
+    const counts = new Map(totals.map((item) => [item.surveyId, item.value]));
+    return rows.map((row) => ({ ...row, responseCount: counts.get(row.id) ?? 0 }));
   });
 }
 
@@ -96,7 +116,7 @@ export async function saveWorkspaceSurvey(
       .insert(surveys)
       .values({ ...survey, workspaceId: key })
       .returning(publicColumns);
-    return saved;
+    return { ...saved, responseCount: 0 };
   });
 }
 

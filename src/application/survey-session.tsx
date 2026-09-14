@@ -7,6 +7,8 @@ import {
   type SurveyInput,
 } from "@/domain/survey/survey";
 import { createSurveyAction, loadSurveysAction, surveyLifecycleAction } from "./survey-actions";
+import { submitResponseAction } from "./survey-actions";
+import type { PublicResponseEnvelope } from "@/domain/privacy/protocol";
 import { usePathname } from "next/navigation";
 
 const SurveyContext = createContext<{
@@ -14,6 +16,13 @@ const SurveyContext = createContext<{
   now: number;
   addSurvey: (input: SurveyInput) => Promise<Survey>;
   changeSurvey: (id: string, operation: "edit" | "close" | "check", input?: SurveyInput) => Promise<Survey>;
+  recordResponse: (envelope: PublicResponseEnvelope) => Promise<{
+    id: string;
+    surveyId: string;
+    commitment: string;
+    nullifier: string;
+    submittedAt: string;
+  }>;
 } | null>(null);
 
 export function SurveySession({
@@ -89,6 +98,18 @@ export function SurveySession({
     setSurveys((current) => current.map((survey) => survey.id === id ? result.data : survey));
     return result.data;
   }
+  async function recordResponse(envelope: PublicResponseEnvelope) {
+    const result = await submitResponseAction(envelope);
+    if (!result.ok) throw new Error(result.error);
+    setSurveys((current) =>
+      current.map((survey) =>
+        survey.id === envelope.surveyId
+          ? { ...survey, responseCount: survey.responseCount + 1 }
+          : survey,
+      ),
+    );
+    return result.data;
+  }
   if (!loaded && pathname !== "/privacy")
     return (
       <main id="main" className="container">
@@ -116,7 +137,7 @@ export function SurveySession({
       </main>
     );
   return (
-    <SurveyContext.Provider value={{ surveys, now, addSurvey, changeSurvey }}>
+    <SurveyContext.Provider value={{ surveys, now, addSurvey, changeSurvey, recordResponse }}>
       {children}
     </SurveyContext.Provider>
   );

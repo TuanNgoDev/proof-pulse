@@ -9,8 +9,9 @@ export type Survey = {
   startsAt: string;
   endsAt: string;
   closedAt?: string | null;
+  responseCount: number;
 };
-export type SurveyInput = Omit<Survey, "id" | "closedAt">;
+export type SurveyInput = Omit<Survey, "id" | "closedAt" | "responseCount">;
 
 export function surveyStatus(
   survey: Pick<Survey, "startsAt" | "endsAt" | "closedAt">,
@@ -52,5 +53,6 @@ export function createSurvey(input: SurveyInput, id: string): Survey {
     eligibility: input.eligibility.trim(),
     startsAt: new Date(input.startsAt).toISOString(),
     endsAt: new Date(input.endsAt).toISOString(),
+    responseCount: 0,
   };
 }

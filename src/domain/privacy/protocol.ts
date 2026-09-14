@@ -33,6 +33,20 @@ function toHex(bytes: Uint8Array) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
+export function getOrCreateParticipantSecret(
+  surveyId: string,
+  storage: Pick<Storage, "getItem" | "setItem"> = localStorage,
+) {
+  if (!/^[A-Za-z0-9_-]{1,100}$/.test(surveyId))
+    throw new Error("Invalid survey identifier.");
+  const key = `proofpulse:participant:${surveyId}`;
+  const existing = storage.getItem(key);
+  if (existing && /^[a-f0-9]{64}$/.test(existing)) return existing;
+  const created = toHex(crypto.getRandomValues(new Uint8Array(32)));
+  storage.setItem(key, created);
+  return created;
+}
+
 async function sha256(value: string) {
   return toHex(
     new Uint8Array(

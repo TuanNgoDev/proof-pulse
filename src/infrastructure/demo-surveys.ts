@@ -10,6 +10,7 @@ export const demoSurveys: Survey[] = [
       "Current members of the Northstar team. In this demo, you choose the eligibility outcome yourself; no membership is actually checked.",
     startsAt: "2026-01-01T00:00:00.000Z",
     endsAt: "2030-01-01T00:00:00.000Z",
+    responseCount: 0,
   },
   {
     id: "community-spaces",
@@ -20,6 +21,7 @@ export const demoSurveys: Survey[] = [
       "Members of the Common Ground community. Membership verification is simulated in this development prototype.",
     startsAt: "2026-01-01T00:00:00.000Z",
     endsAt: "2030-02-01T00:00:00.000Z",
+    responseCount: 0,
   },
   {
     id: "campus-experience",
@@ -30,6 +32,7 @@ export const demoSurveys: Survey[] = [
       "Currently enrolled students. Real student credentials are not collected or verified in this demo.",
     startsAt: "2030-04-01T00:00:00.000Z",
     endsAt: "2030-05-01T00:00:00.000Z",
+    responseCount: 0,
   },
   {
     id: "product-listening",
@@ -39,5 +42,6 @@ export const demoSurveys: Survey[] = [
     eligibility: "Members of the product research group.",
     startsAt: "2025-01-01T00:00:00.000Z",
     endsAt: "2025-02-01T00:00:00.000Z",
+    responseCount: 0,
   },
 ];
