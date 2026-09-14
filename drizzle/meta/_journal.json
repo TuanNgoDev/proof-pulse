@@ -15,6 +15,13 @@
       "when": 1788969513781,
       "tag": "0001_unique_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789399888101,
+      "tag": "0002_thankful_hardball",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,263 @@
+{
+  "id": "a29a6836-14b0-4f8c-9940-e76a7e6834f8",
+  "prevId": "f7f50e75-39f4-41c5-834d-bd005e980d7d",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.pp_response_commitments": {
+      "name": "pp_response_commitments",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "survey_id": {
+          "name": "survey_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "commitment": {
+          "name": "commitment",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nullifier": {
+          "name": "nullifier",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "submitted_at": {
+          "name": "submitted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pp_response_commitments_workspace_id_pp_workspaces_id_fk": {
+          "name": "pp_response_commitments_workspace_id_pp_workspaces_id_fk",
+          "tableFrom": "pp_response_commitments",
+          "tableTo": "pp_workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "pp_response_commitments_workspace_id_survey_id_pp_surveys_workspace_id_id_fk": {
+          "name": "pp_response_commitments_workspace_id_survey_id_pp_surveys_workspace_id_id_fk",
+          "tableFrom": "pp_response_commitments",
+          "tableTo": "pp_surveys",
+          "columnsFrom": [
+            "workspace_id",
+            "survey_id"
+          ],
+          "columnsTo": [
+            "workspace_id",
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pp_response_commitments_workspace_id_id_pk": {
+          "name": "pp_response_commitments_workspace_id_id_pk",
+          "columns": [
+            "workspace_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {
+        "pp_response_commitments_nullifier": {
+          "name": "pp_response_commitments_nullifier",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "survey_id",
+            "nullifier"
+          ]
+        },
+        "pp_response_commitments_value": {
+          "name": "pp_response_commitments_value",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "survey_id",
+            "commitment"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {
+        "pp_response_commitments_hex": {
+          "name": "pp_response_commitments_hex",
+          "value": "\"pp_response_commitments\".\"commitment\" ~ '^[a-f0-9]{64}$' AND \"pp_response_commitments\".\"nullifier\" ~ '^[a-f0-9]{64}$'"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pp_surveys": {
+      "name": "pp_surveys",
+      "schema": "",
+      "columns": {
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "description": {
+          "name": "description",
+          "type": "varchar(2000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "eligibility": {
+          "name": "eligibility",
+          "type": "varchar(500)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "starts_at": {
+          "name": "starts_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ends_at": {
+          "name": "ends_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "closed_at": {
+          "name": "closed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "pp_surveys_workspace_id_pp_workspaces_id_fk": {
+          "name": "pp_surveys_workspace_id_pp_workspaces_id_fk",
+          "tableFrom": "pp_surveys",
+          "tableTo": "pp_workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "pp_surveys_workspace_id_id_pk": {
+          "name": "pp_surveys_workspace_id_id_pk",
+          "columns": [
+            "workspace_id",
+            "id"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {
+        "pp_surveys_date_order": {
+          "name": "pp_surveys_date_order",
+          "value": "\"pp_surveys\".\"ends_at\" > \"pp_surveys\".\"starts_at\""
+        },
+        "pp_surveys_title_length": {
+          "name": "pp_surveys_title_length",
+          "value": "length(btrim(\"pp_surveys\".\"title\")) >= 3"
+        },
+        "pp_surveys_description_length": {
+          "name": "pp_surveys_description_length",
+          "value": "length(btrim(\"pp_surveys\".\"description\")) >= 10"
+        },
+        "pp_surveys_eligibility_length": {
+          "name": "pp_surveys_eligibility_length",
+          "value": "length(btrim(\"pp_surveys\".\"eligibility\")) >= 5"
+        }
+      },
+      "isRLSEnabled": false
+    },
+    "public.pp_workspaces": {
+      "name": "pp_workspaces",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(64)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}
