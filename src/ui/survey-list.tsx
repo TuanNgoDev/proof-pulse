@@ -100,7 +100,7 @@ export function SurveyList() {
       <p className="section-note">
         <Shield />
         Survey metadata is saved to this browser’s workspace. Response text is
-        never stored.
+        never stored; only opaque commitments and a count are retained.
       </p>
     </main>
   );

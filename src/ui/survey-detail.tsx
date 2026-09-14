@@ -95,7 +95,7 @@ export function SurveyDetail({ id }: { id: string }) {
               <div className="notice">
                 {status === "Scheduled"
                   ? "This survey hasn’t opened yet. Come back after the start date."
-                  : "This survey has closed. Results and aggregation are not implemented in this first pass."}
+                  : "This survey has closed. Result aggregation is not implemented yet."}
               </div>
             )}
           </section>
@@ -127,7 +127,7 @@ export function SurveyDetail({ id }: { id: string }) {
               <div>
                 <strong>Response: Private to your screen</strong>
                 <span className="muted">
-                  Response text is not sent to a server or published.
+                  Response text is not sent or published; only its commitment is retained.
                 </span>
               </div>
             </li>

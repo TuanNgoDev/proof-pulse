@@ -2,6 +2,8 @@
 
 **Live web preview:** https://proof-pulse-gamma.vercel.app
 
+**Current progress: ~60%**
+
 Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
 reloads in the same browser workspace. The browser workflow remains off-chain, while
 three independent Compact contract instances and proof-backed smoke transactions are
@@ -18,8 +20,10 @@ collecting identities alongside individual responses.
 - Input validation and Scheduled → Open → Closed lifecycle; closing is exclusive.
 - Participant journey with explicit eligible/ineligible development scenarios.
 - Response form gated by survey window and survey-bound demo eligibility.
-- Private form state isolated from public metadata; simulated submit clears text.
-- Domain interfaces for future participant proofs, nullifiers and atomic claims.
+- Browser-side salted response commitments; raw text is cleared without entering a request body or database.
+- Stable per-browser, per-survey participant secrets and survey-scoped nullifiers with atomic duplicate rejection.
+- PostgreSQL response receipts containing only commitment, nullifier, receipt ID, timestamp, and aggregate count.
+- Domain interfaces for future participant proofs and ledger-backed atomic claims.
 - Compact contract with constructor-bound organizer authorization, explicit participant
   enrollment, kernel-time windows, irreversible closure, salted response commitments,
   and per-secret duplicate guards. It is release-compiled and separately deployed to
@@ -30,7 +34,7 @@ collecting identities alongside individual responses.
 - Server Action validation, parameterized queries, cookie isolation and tracked migrations.
 - Edit not-yet-open surveys and close Open surveys early with confirmation/cancellation.
 - Preserve the scheduled end and record early closure separately; closed surveys cannot reopen.
-- Recheck persisted lifecycle before demo eligibility and simulated submission, including stale tabs.
+- Atomically recheck persisted lifecycle before accepting a response commitment, including stale tabs.
 
 ## Privacy and prototype limits
 
@@ -45,27 +49,27 @@ database rows. No account recovery or automatic retention cleanup exists yet.
 The cookie is a bearer credential and links browser visits; this is not strong
 authentication, end-to-end encryption, or cryptographic anonymity. Database operators
 can read survey metadata. All data access is through server-only workspace-scoped
-queries; the browser cannot supply a workspace id. No response or participant identity
+queries; the browser cannot supply a workspace id. No raw response or participant identity
 column exists. Seed metadata is inserted transactionally once per workspace and uses
-deliberately broad dates to keep the first-pass demo explorable.
+deliberately broad dates to keep the hosted demo explorable.
 
-Private response text lives only in the participant component. It is **not sent,
-saved, encrypted or aggregated**; simulation validates and clears it. Use made-up
-feedback only. Browser extensions, developer tools and the device can read form
-data. No identity fields does not equal cryptographic anonymity. Ordinary page
-requests still expose network metadata to the hosting infrastructure.
+Private response text lives only in the participant component. The browser trims it,
+combines it with a fresh private salt, and creates a SHA-256 commitment. The server
+receives only that commitment and a survey-scoped nullifier, then clears the form.
+The salt and stable browser-local participant secret are never transmitted. Use made-up
+feedback only: browser extensions, developer tools and the device can still read form
+data, and low-level network metadata remains visible to the hosting infrastructure.
 
-Eligibility and simulated submission send only a survey identifier and a lifecycle
-check operation to the server, never the response text or participant information.
-The check reads the current workspace-scoped row under the same lock used by edits
-and early closure. Database time is read after acquiring that lock. A closed survey
-or failed storage check prevents completion; stale metadata refreshes after rejection.
-This is a point-in-time lifecycle check, not a response receipt or proof.
+Submission sends only the survey identifier, commitment, and nullifier. The server locks
+the current workspace-scoped survey, reads database time, verifies the Open window, and
+inserts the opaque receipt in the same transaction. Unique constraints reject concurrent
+reuse of either the nullifier or commitment. Closed surveys fail before insertion.
 
 The development adapter lets you select an eligible/ineligible outcome. It does
 not authenticate, check credentials, issue a proof or call a blockchain. A demo
-result is intentionally not the production `ParticipantProof` type. Repeating
-participation is possible. A completed UI state is not nullifier protection.
+result is intentionally not the production `ParticipantProof` type. The hosted duplicate
+guard is browser-pseudonymous, not one-person-one-response: clearing local storage or using
+another browser creates a new secret and nullifier.
 
 ## Stack and organization
 
@@ -76,13 +80,13 @@ ESLint 9, pnpm 10.18.3, PostgreSQL (`pg`) and Drizzle ORM. No separate backend o
 src/app/              routes and shared application shell
 src/domain/survey/    public metadata, validation and lifecycle
 src/domain/participant/ eligibility and response rules
-src/domain/privacy/   future proof/nullifier protocol boundary
+src/domain/privacy/   client commitment/nullifier preparation and future proof boundary
 src/application/      async survey session, server actions and input boundary
 src/infrastructure/   server-only database, schema, seed data and demo adapter
 src/ui/               reusable visual elements and product screens
 contracts/            small Compact prototype and integration notes
 tests/                executable domain and boundary tests
-drizzle/              versioned SQL migrations and schema snapshots
+drizzle/              survey and opaque response-receipt migrations
 ```
 
 Domain-centric, not strict DDD: only abstractions required by this pass are present.
@@ -129,9 +133,10 @@ missing; it never silently saves to browser memory. `/privacy` remains readable.
 
 `src/infrastructure/database/schema.ts` is the source of truth. Apply the committed
 tracked migrations via `pnpm db:migrate` using the direct connection. Migration
-`drizzle/0001_unique_dazzler.sql` adds nullable `closed_at`; it preserves existing
-survey dates and rows. An earlier iteration validated it on an isolated development
-database branch; production migration/deployment remains a separate operator step.
+`drizzle/0001_unique_dazzler.sql` adds nullable `closed_at`; `0002_thankful_hardball.sql`
+adds opaque response receipts and uniqueness constraints. Both preserve existing survey
+rows. The latest migration and duplicate-concurrency check were applied to the configured
+Neon database during this development pass.
 For future schema changes, edit the Drizzle schema, run `pnpm db:generate`, review the
 generated SQL and apply it to a disposable branch before production. Do not use
 ad hoc DDL or `drizzle-kit push` for deployment. No external database is provisioned
@@ -147,14 +152,15 @@ pnpm test:db
 concurrent one-time seeding, persisted reloads, cross-workspace isolation, private
 field rejection, a real database date constraint, and concurrent quota enforcement.
 It also checks scheduled-only edits, future-start validation, open-only closure,
-concurrent close attempts, preserved end dates, and stale lifecycle-check rejection.
+concurrent close attempts, preserved end dates, stale lifecycle rejection, opaque receipt
+storage, public counts, and concurrent nullifier rejection.
 It cleans up only its two
 random test workspaces. The schema must already be migrated. Unit tests alone do
 not establish that a live database migration or deployment has succeeded.
 
 For a browser smoke check: create a survey, reload and reopen it; then open its URL
-in another browser/incognito session and confirm it is unavailable there. Responses
-remain component-local and the simulation still clears them without sending them.
+in another browser/incognito session and confirm it is unavailable there. Submit made-up
+feedback and verify that only the receipt/count survives navigation, never the text.
 
 Workspaces are capped at 500 surveys (including the four examples). A database row
 lock serializes creates in the same workspace so concurrent requests cannot bypass
@@ -185,7 +191,8 @@ protocol timestamp.
 2. Choose **Take part in this survey**.
 3. Select **Not eligible participant**, then **Verify Eligibility**. Response stays locked.
 4. Select **Eligible participant**, verify again, and enter made-up feedback.
-5. **Simulate private submission** clears the text; nothing is collected.
+5. **Submit private commitment** clears the text and returns an opaque receipt. Repeating
+   from the same browser secret is rejected; the detail page shows only the count.
 6. Visit `/surveys/new`, create a survey, and inspect its details. Refresh to verify persistence.
 7. `/surveys/campus-experience` is scheduled; `/surveys/product-listening` is closed.
 8. `/privacy` explains the actual data boundaries.
@@ -220,7 +227,8 @@ The canary response was accepted only after the on-chain start time and produced
 response commitment. **This is not one-person-one-response:** organizer enrollment is
 approval of a secret commitment, not verified human uniqueness. Public timing,
 nullifiers, and counts remain linkable; raw response content is never placed on the
-ledger. The hosted UI still only simulates submission. See [contract notes](contracts/README.md).
+ledger. The hosted UI persists compatible opaque receipts but still does not call the
+Compact contract. See [contract notes](contracts/README.md).
 
 Reference material: [Next.js installation](https://nextjs.org/docs/app/getting-started/installation)
 and [Compact language reference](https://docs.midnight.network/compact/reference/compact-reference).
@@ -230,13 +238,13 @@ and [Compact language reference](https://docs.midnight.network/compact/reference
 1. Integrate organizer authorization with the UI; add account identity, key custody/recovery,
    retention cleanup and abuse/rate limits.
 2. Replace the development scenario with reviewed eligible-group proof constraints.
-3. Bind participant secrets to verified credentials; validate commitment/nullifier
-   atomicity and concurrency on the network.
+3. Bind participant secrets to verified credentials; move the tested database duplicate
+   guard to ledger-backed commitment/nullifier claims.
 4. Integrate the hosted UI with a supported wallet and proof provider; retain the adversarial contract tests at that boundary.
 5. Add secure collection and aggregate publication with an explicit disclosure policy.
 
 Production nullifiers, demographic analytics, anonymous follow-ups, and complex
-results dashboards are deliberately outside this first pass.
+results dashboards remain outside the current scope.
 
 Persistence does not complete the Midnight protocol or make this demo production-ready.
 Review access controls, quotas, retention and database role privileges before allowing

@@ -12,8 +12,8 @@ export default function PrivacyPage() {
         <h1>Privacy, without the fine print.</h1>
         <p style={{ marginTop: 22 }}>
           ProofPulse is exploring a simple idea: prove you belong in a
-          conversation without having to introduce yourself. This first pass is
-          a development prototype, not a secure survey service.
+          conversation without having to introduce yourself. Current progress
+          is approximately 60%; this is not yet a secure survey service.
         </p>
         <h2>What this demo actually does</h2>
         <p>
@@ -32,10 +32,11 @@ export default function PrivacyPage() {
           metadata. Use made-up information only.
         </p>
         <p>
-          Your response is kept separately, in the response form’s React state.
-          The simulate button validates and clears it. There is no collection,
-          storage, analytics, result publication or network submission of your
-          response.
+          Your response is trimmed and hashed in the browser with a fresh
+          private salt. Only its 32-byte commitment and a survey-scoped
+          nullifier cross the network. PostgreSQL retains those opaque values,
+          a receipt ID, timestamp, and aggregate count; it never receives the
+          response text, participant secret, or salt.
         </p>
         <h2>What “verified” means here</h2>
         <p>
@@ -52,21 +53,22 @@ export default function PrivacyPage() {
           Use made-up feedback only.
         </p>
         <p>
-          No response data is intentionally sent over the network by this app.
-          Ordinary web navigation still exposes network metadata to the hosting
+          Opaque response metadata is intentionally sent over the network.
+          Ordinary web navigation also exposes network metadata to the hosting
           infrastructure. No production anonymity claim is made.
         </p>
         <h2>What comes next</h2>
         <p>
-          Real eligible-group proofs, survey-scoped nullifiers, atomic duplicate
-          prevention, secure response handling and eventually verifiable
-          aggregates. None of those are implemented here. You can repeat this
-          demo flow; its completion screen is not duplicate protection.
+          The database atomically rejects a reused nullifier within one survey.
+          The participant secret is browser-local, so clearing site storage or
+          using another browser creates a new pseudonym. Real eligible-group
+          proofs, one-person uniqueness, wallet integration, secure response
+          collection, and verifiable aggregates remain future work.
         </p>
         <div className="notice">
-          The included Compact foundation compiles with proving-key generation
-          skipped. The response circuit fails closed. No contract has been
-          deployed and no chain transaction occurs.
+          The Compact contract is release-compiled with prover/verifier assets
+          and three instances are verified on Midnight Preprod. The hosted UI
+          still uses its database adapter and does not submit chain transactions.
         </div>
       </article>
     </main>
