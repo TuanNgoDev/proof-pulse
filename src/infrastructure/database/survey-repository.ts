@@ -2,10 +2,14 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { and, count, desc, eq, getTableColumns, sql } from "drizzle-orm";
 import { createSurvey, surveyStatus, type Survey } from "@/domain/survey/survey";
-import { parseSurveyInput } from "@/application/survey-input";
+import {
+  parseResponseEnvelope,
+  parseSurveyInput,
+} from "@/application/survey-input";
+import type { PublicResponseEnvelope } from "@/domain/privacy/protocol";
 import { demoSurveys } from "../demo-surveys";
 import { getDatabase, type Database } from "./client";
-import { surveys, workspaces } from "./schema";
+import { responseCommitments, surveys, workspaces } from "./schema";
 
 const { id, title, description, eligibility, startsAt, endsAt, closedAt } =
   getTableColumns(surveys);
@@ -93,5 +97,61 @@ export async function saveWorkspaceSurvey(
       .values({ ...survey, workspaceId: key })
       .returning(publicColumns);
     return saved;
+  });
+}
+
+export async function recordResponseCommitment(
+  key: string,
+  input: PublicResponseEnvelope,
+  db: Database = getDatabase(),
+) {
+  const envelope = parseResponseEnvelope(input);
+  return db.transaction(async (tx) => {
+    const scope = and(
+      eq(surveys.workspaceId, key),
+      eq(surveys.id, envelope.surveyId),
+    );
+    const [survey] = await tx
+      .select(publicColumns)
+      .from(surveys)
+      .where(scope)
+      .for("update");
+    if (!survey) throw new RangeError("Survey is unavailable in this workspace.");
+    const clock = await tx.execute<{ now: string }>(
+      sql`select clock_timestamp()::text as now`,
+    );
+    if (surveyStatus(survey, Date.parse(clock.rows[0].now)) !== "Open")
+      throw new RangeError("This survey is no longer open. Refresh its details.");
+    const [total] = await tx
+      .select({ value: count() })
+      .from(responseCommitments)
+      .where(
+        and(
+          eq(responseCommitments.workspaceId, key),
+          eq(responseCommitments.surveyId, envelope.surveyId),
+        ),
+      );
+    if (total.value >= 500)
+      throw new RangeError("This survey has reached its response receipt limit.");
+    const [created] = await tx
+      .insert(responseCommitments)
+      .values({
+        workspaceId: key,
+        surveyId: envelope.surveyId,
+        id: randomUUID(),
+        commitment: envelope.commitment,
+        nullifier: envelope.nullifier,
+      })
+      .onConflictDoNothing()
+      .returning();
+    if (!created)
+      throw new RangeError("This participation nullifier was already used.");
+    return {
+      id: created.id,
+      surveyId: created.surveyId,
+      commitment: created.commitment,
+      nullifier: created.nullifier,
+      submittedAt: new Date(created.submittedAt).toISOString(),
+    };
   });
 }

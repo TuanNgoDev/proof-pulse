@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { existsSync } from "node:fs";
 import test from "node:test";
-import { inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import {
   loadWorkspaceSurveys,
+  recordResponseCommitment,
   saveWorkspaceSurvey,
 } from "../src/infrastructure/database/survey-repository";
 import * as repository from "../src/infrastructure/database/survey-repository";
@@ -68,6 +69,34 @@ test("PostgreSQL seeds once, persists refresh reads and isolates browser workspa
     await assert.rejects(repository.changeWorkspaceSurvey(key, scheduled.id, "edit", input, db));
     const beforeClose = await repository.changeWorkspaceSurvey(key, saved.id, "check", undefined, db);
     assert.equal(beforeClose.closedAt, null);
+    const duplicateAttempts = await Promise.allSettled([
+      recordResponseCommitment(key, {
+        surveyId: saved.id,
+        commitment: "11".repeat(32),
+        nullifier: "aa".repeat(32),
+      }, db),
+      recordResponseCommitment(key, {
+        surveyId: saved.id,
+        commitment: "22".repeat(32),
+        nullifier: "aa".repeat(32),
+      }, db),
+    ]);
+    assert.equal(
+      duplicateAttempts.filter((item) => item.status === "fulfilled").length,
+      1,
+      "One survey-scoped nullifier can create only one receipt under concurrency.",
+    );
+    const [storedReceipt] = await db
+      .select()
+      .from(schema.responseCommitments)
+      .where(eq(schema.responseCommitments.surveyId, saved.id));
+    assert.ok(storedReceipt);
+    assert.equal("response" in storedReceipt, false);
+    await assert.rejects(recordResponseCommitment(key, {
+      surveyId: saved.id,
+      commitment: "33".repeat(32),
+      nullifier: "aa".repeat(32),
+    }, db));
     const closes = await Promise.allSettled([
       repository.changeWorkspaceSurvey(key, saved.id, "close", undefined, db),
       repository.changeWorkspaceSurvey(key, saved.id, "close", undefined, db),

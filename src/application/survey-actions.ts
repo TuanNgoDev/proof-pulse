@@ -5,16 +5,39 @@ import {
   loadWorkspaceSurveys,
   saveWorkspaceSurvey,
   changeWorkspaceSurvey,
+  recordResponseCommitment,
 } from "@/infrastructure/database/survey-repository";
 import {
   newWorkspaceToken,
   workspaceKey,
 } from "@/infrastructure/workspace-token";
 import { parseSurveyInput } from "./survey-input";
+import { parseResponseEnvelope } from "./survey-input";
 import type { Survey } from "@/domain/survey/survey";
 
 const cookieName = "proofpulse_workspace";
 type Result<T> = { ok: true; data: T } | { ok: false; error: string };
+
+export async function submitResponseAction(input: unknown) {
+  try {
+    const envelope = parseResponseEnvelope(input);
+    const token = (await cookies()).get(cookieName)?.value;
+    if (!token || !/^[A-Za-z0-9_-]{43}$/.test(token))
+      return { ok: false as const, error: "Open your survey workspace first." };
+    return {
+      ok: true as const,
+      data: await recordResponseCommitment(workspaceKey(token), envelope),
+    };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error:
+        error instanceof RangeError
+          ? error.message
+          : "Response commitment could not be recorded. Retry before assuming it was accepted.",
+    };
+  }
+}
 
 export async function surveyLifecycleAction(
   id: string,
