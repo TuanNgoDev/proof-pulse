@@ -360,6 +360,42 @@ h3 {
 .panel h2 {
   margin-bottom: 16px;
 }
+.preprod-console fieldset {
+  min-width: 0;
+  border: 0;
+  padding: 0;
+}
+.preprod-console label {
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.preprod-console input,
+.preprod-console textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid #ccd3c9;
+  border-radius: 6px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #fff;
+  font-weight: 400;
+}
+.preprod-console button {
+  justify-self: start;
+  border: 1px solid var(--teal);
+  border-radius: 6px;
+  padding: 10px 16px;
+  background: var(--teal);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+}
+.preprod-console code,
+.preprod-console a {
+  overflow-wrap: anywhere;
+}
 .detail-description {
   font-size: 17px;
   line-height: 1.8;

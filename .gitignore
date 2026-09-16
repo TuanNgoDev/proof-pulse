@@ -1,5 +1,6 @@
 node_modules/
 .compact-build/
+public/zk/
 .next/
 out/
 .env*

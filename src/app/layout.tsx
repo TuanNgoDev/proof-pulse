@@ -32,6 +32,7 @@ export default function RootLayout({
           <nav aria-label="Main navigation">
             <Link href="/">Surveys</Link>
             <Link href="/privacy">How privacy works</Link>
+            <Link href="/preprod">Midnight Preprod</Link>
           </nav>
           <span className="demo-label">
             <span />
