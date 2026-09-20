@@ -1,10 +1,30 @@
 # ProofPulse
 
-**Live web preview:** https://proof-pulse-gamma.vercel.app
+> **Level 4 reviewer packet**
+>
+> [Open the product](https://proof-pulse-midnight.onrender.com) · [Use the Midnight Preprod console](https://proof-pulse-midnight.onrender.com/preprod) · [Follow the product on X](https://x.com/TuanAR205)
 
-**Current progress: ~60%**
+## Submission evidence
 
-Hosted on Vercel with a dedicated Neon database. Survey metadata persists across
+1. **Public source:** [TuanNgoDev/proof-pulse](https://github.com/TuanNgoDev/proof-pulse)
+2. **Live Preprod MVP:** [ProofPulse on Render](https://proof-pulse-midnight.onrender.com) with the [Lace-signed contract console](https://proof-pulse-midnight.onrender.com/preprod).
+3. **Contract:** [`979d1dcedf1a54ffc822b445d47e9dd12f77924e2e872eabd1bbb3a81f8950da`](https://explorer.preprod.midnight.network/contracts/stream/979d1dcedf1a54ffc822b445d47e9dd12f77924e2e872eabd1bbb3a81f8950da), deployed in [transaction `005d0e52...65ce`](https://explorer.preprod.midnight.network/transactions/005d0e529cea7f4039bf764c2d29481b32979becb1ea8b1356f4c24d4354ae65ce). The complete record is in [`deployments/preprod.json`](deployments/preprod.json).
+4. **Documentation:** [setup](#local-setup), [usage walkthrough](#try-the-main-flow), [privacy boundaries](#privacy-and-prototype-limits), and [Compact notes](contracts/README.md).
+5. **CI/CD:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds the web app and Compact contract and runs lint, type checks, and tests; Render auto-deploys successful pushes to `main`.
+6. **Product profile:** [@TuanAR205](https://x.com/TuanAR205).
+7. **Commit history:** [42+ meaningful commits](https://github.com/TuanNgoDev/proof-pulse/commits/main/), exceeding the required 15.
+8. **Demo video:** **Pending** - the walkthrough link will be added after recording.
+
+### Level 4 checklist
+
+- [x] Public GitHub repository with full documentation
+- [x] Live Preprod demo and verifiable contract address
+- [x] CI workflow committed to the product repository
+- [x] Public product X profile linked
+- [ ] Demo video - **Pending**
+- [x] Minimum 15 meaningful commits
+
+Hosted on Render with a dedicated Neon database. Survey metadata persists across
 reloads in the same browser workspace. The browser workflow remains off-chain, while
 three independent Compact contract instances and proof-backed smoke transactions are
 verified on Midnight Preprod.

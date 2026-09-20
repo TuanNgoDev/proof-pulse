@@ -1,0 +1,36 @@
+name: ProofPulse quality gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proof-pulse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preprod-ready:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install locked dependencies
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.18.3 --activate
+          pnpm install --frozen-lockfile
+      - name: Build and validate
+        run: |
+          export PATH="$HOME/.compact/bin:$HOME/.local/bin:$PATH"
+          bash scripts/build-production.sh
+          pnpm lint
+          pnpm typecheck
+          pnpm test
+          pnpm test:contract
