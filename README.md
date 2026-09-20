@@ -12,7 +12,7 @@
 4. **Documentation:** [setup](#local-setup), [usage walkthrough](#try-the-main-flow), [privacy boundaries](#privacy-and-prototype-limits), and [Compact notes](contracts/README.md).
 5. **CI/CD:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds the web app and Compact contract and runs lint, type checks, and tests; Render auto-deploys successful pushes to `main`.
 6. **Product profile:** [@TuanAR205](https://x.com/TuanAR205).
-7. **Commit history:** [43+ meaningful commits](https://github.com/TuanNgoDev/proof-pulse/commits/main/), exceeding the required 15.
+7. **Commit history:** [44+ meaningful commits](https://github.com/TuanNgoDev/proof-pulse/commits/main/), exceeding the required 15.
 8. **Demo video:** **Pending** - the walkthrough link will be added after recording.
 
 ### Level 4 checklist
@@ -24,10 +24,10 @@
 - [ ] Demo video - **Pending**
 - [x] Minimum 15 meaningful commits
 
-Hosted on Render with a dedicated Neon database. Survey metadata persists across
-reloads in the same browser workspace. The product keeps that survey workspace
-separate from a dedicated Lace-signed `/preprod` console that reads and submits
-transactions to three verified Compact contract instances on Midnight Preprod.
+The hosted entry route now opens the Lace-first survey workspace. Role-scoped private
+state comes from wallet signatures; Lace handles proof generation, fees, and submission
+without manual organizer or participant secrets. Three Compact contract instances are
+verified on Midnight Preprod.
 
 ProofPulse is a verified anonymous survey and feedback prototype. It explores how
 organizations could hear candid feedback from eligible participants without

@@ -1,21 +1,18 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
-import { SurveySession } from "@/application/survey-session";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "ProofPulse — thoughtful feedback, private by design",
   description:
-    "A development prototype for verified anonymous surveys on Midnight.",
+    "Wallet-signed anonymous surveys on Midnight Preprod.",
 };
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  // eslint-disable-next-line react-hooks/purity -- Dynamic server-only snapshot, serialized unchanged for client hydration.
-  const initialNow = Date.now();
   return (
     <html lang="en">
       <body>
@@ -30,19 +27,17 @@ export default function RootLayout({
             ProofPulse<span className="brand-dot">.</span>
           </Link>
           <nav aria-label="Main navigation">
-            <Link href="/">Surveys</Link>
-            <Link href="/privacy">How privacy works</Link>
-            <Link href="/preprod">Midnight Preprod</Link>
+            <Link href="/preprod">Survey workspace</Link>
           </nav>
           <span className="demo-label">
             <span />
-            Browser workspace
+            Lace · Preprod
           </span>
         </header>
-        <SurveySession initialNow={initialNow}>{children}</SurveySession>
+        {children}
         <footer className="site-footer">
           <span>A little proof. A lot more honesty.</span>
-          <span>ProofPulse / Midnight prototype · No live network</span>
+          <span>ProofPulse / Wallet-signed Midnight Preprod</span>
         </footer>
       </body>
     </html>
