@@ -12,7 +12,7 @@
 4. **Documentation:** [setup](#local-setup), [usage walkthrough](#try-the-main-flow), [privacy boundaries](#privacy-and-prototype-limits), and [Compact notes](contracts/README.md).
 5. **CI/CD:** [`.github/workflows/ci.yml`](.github/workflows/ci.yml) builds the web app and Compact contract and runs lint, type checks, and tests; Render auto-deploys successful pushes to `main`.
 6. **Product profile:** [@TuanAR205](https://x.com/TuanAR205).
-7. **Commit history:** [42+ meaningful commits](https://github.com/TuanNgoDev/proof-pulse/commits/main/), exceeding the required 15.
+7. **Commit history:** [43+ meaningful commits](https://github.com/TuanNgoDev/proof-pulse/commits/main/), exceeding the required 15.
 8. **Demo video:** **Pending** - the walkthrough link will be added after recording.
 
 ### Level 4 checklist
@@ -25,9 +25,9 @@
 - [x] Minimum 15 meaningful commits
 
 Hosted on Render with a dedicated Neon database. Survey metadata persists across
-reloads in the same browser workspace. The browser workflow remains off-chain, while
-three independent Compact contract instances and proof-backed smoke transactions are
-verified on Midnight Preprod.
+reloads in the same browser workspace. The product keeps that survey workspace
+separate from a dedicated Lace-signed `/preprod` console that reads and submits
+transactions to three verified Compact contract instances on Midnight Preprod.
 
 ProofPulse is a verified anonymous survey and feedback prototype. It explores how
 organizations could hear candid feedback from eligible participants without
@@ -247,8 +247,9 @@ The canary response was accepted only after the on-chain start time and produced
 response commitment. **This is not one-person-one-response:** organizer enrollment is
 approval of a secret commitment, not verified human uniqueness. Public timing,
 nullifiers, and counts remain linkable; raw response content is never placed on the
-ledger. The hosted UI persists compatible opaque receipts but still does not call the
-Compact contract. See [contract notes](contracts/README.md).
+ledger. The database survey flow persists compatible opaque receipts; direct Compact
+reads, deployments, enrollment, responses, and close actions run through the hosted
+`/preprod` console. See [contract notes](contracts/README.md).
 
 Reference material: [Next.js installation](https://nextjs.org/docs/app/getting-started/installation)
 and [Compact language reference](https://docs.midnight.network/compact/reference/compact-reference).
@@ -260,7 +261,7 @@ and [Compact language reference](https://docs.midnight.network/compact/reference
 2. Replace the development scenario with reviewed eligible-group proof constraints.
 3. Bind participant secrets to verified credentials; move the tested database duplicate
    guard to ledger-backed commitment/nullifier claims.
-4. Integrate the hosted UI with a supported wallet and proof provider; retain the adversarial contract tests at that boundary.
+4. Harden the existing Lace/proof-provider integration with durable private-state custody and recovery; retain the adversarial contract tests at that boundary.
 5. Add secure collection and aggregate publication with an explicit disclosure policy.
 
 Production nullifiers, demographic analytics, anonymous follow-ups, and complex
