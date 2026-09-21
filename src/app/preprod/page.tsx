@@ -186,7 +186,7 @@ export default function PreprodPage() {
         <button type="button" disabled={busy} onClick={() => { void connect(); }}>
           {busy ? "Connecting…" : api ? "Reconnect Lace" : "Connect Lace"}
         </button>
-        <p>{walletAddress || "Lace 4.x must be set to Midnight Preprod."}</p>
+        {walletAddress ? <p>{walletAddress}</p> : null}
       </li>
 
       {api ? <>

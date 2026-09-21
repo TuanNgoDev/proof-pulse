@@ -9,4 +9,5 @@ test("survey workspace opts into its scoped controls and flow styling", () => {
   assert.match(page, /className="preprod-console pulse-console"/);
   assert.match(css, /\.pulse-flow \.panel\s*\{/);
   assert.match(css, /\.pulse-console button:hover/);
+  assert.doesNotMatch(page, /Lace 4\.x must be set to Midnight Preprod\./);
 });
