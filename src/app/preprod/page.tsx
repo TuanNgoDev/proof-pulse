@@ -173,14 +173,14 @@ export default function PreprodPage() {
     }
   }
 
-  return <main id="main" style={{ maxWidth: 760, margin: "0 auto", padding: "40px 20px 72px" }}>
-    <header style={{ textAlign: "center", marginBottom: 28 }}>
-      <p style={{ letterSpacing: "0.18em", textTransform: "uppercase", opacity: 0.65 }}>ProofPulse · Preprod</p>
+  return <main id="main" className="preprod-console pulse-console">
+    <header className="pulse-hero">
+      <p className="pulse-kicker">ProofPulse · Preprod</p>
       <h1>Private feedback, signed by Lace</h1>
       <p>The wallet supplies identity, proof generation, fees, and transaction submission. No participant or organizer secret is requested.</p>
     </header>
 
-    <ol style={{ listStyle: "none", padding: 0, display: "grid", gap: 18 }}>
+    <ol className="pulse-flow">
       <li className="panel">
         <p><strong>01 · Connect wallet</strong></p>
         <button type="button" disabled={busy} onClick={() => { void connect(); }}>
@@ -200,7 +200,7 @@ export default function PreprodPage() {
         <li className="panel">
           <p><strong>03 · Launch a survey</strong></p>
           <label>Survey question<textarea rows={3} maxLength={500} value={question} onChange={(event) => setQuestion(event.target.value)} /></label>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+          <div className="pulse-date-grid">
             <label>Starts<input type="datetime-local" value={start} onChange={(event) => setStart(event.target.value)} /></label>
             <label>Ends<input type="datetime-local" value={end} onChange={(event) => setEnd(event.target.value)} /></label>
           </div>
@@ -211,7 +211,7 @@ export default function PreprodPage() {
           <p><strong>04 · Participate</strong></p>
           <button type="button" disabled={busy} onClick={() => { void enrollWallet(); }}>Enroll this wallet</button>
           <label>Anonymous response<textarea rows={5} maxLength={4000} value={response} onChange={(event) => setResponse(event.target.value)} /></label>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 10 }}>
+          <div className="pulse-action-row">
             <button type="button" disabled={busy} onClick={() => { void submitResponse(); }}>Submit private response</button>
             <button type="button" disabled={busy} onClick={() => { void closeSurvey(); }}>Close survey</button>
           </div>
